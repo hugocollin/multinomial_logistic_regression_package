@@ -39,12 +39,40 @@ DataPreparer <- R6Class("DataPreparer",
       
       # Vérification des colonnes
       if (!target %in% colnames(data)) stop("[Attention] La variable cible n'existe pas dans le jeu de données.")
-      if (!all(predictors %in% colnames(data))) stop("[Attention] Certaines variables prédictives sont manquantes.")
+      if (!all(predictors %in% colnames(data))) stop("[Attention] Certaines variables prédictives sont manquantes")
       
       self$data <- data             # Sauvegarde des données
       self$target <- target         # Sauvegarde de la variable cible
       self$predictors <- predictors # Sauvegarde des variables prédictives
       self$levels_map <- list()     # Initialisation du mapping des niveaux
+    },
+
+    # Fonction de gestion des valeurs manquantes
+    handle_missing_values = function(method = c("mean", "median", "mode", "remove")) {
+      method <- match.arg(method)
+      df <- self$data
+      
+      for (var in colnames(df)) {
+        if (any(is.na(df[[var]]))) {
+          # Remplacement des valeurs manquantes par la moyenne
+          if (method == "mean" && is.numeric(df[[var]])) {
+            df[[var]][is.na(df[[var]])] <- mean(df[[var]], na.rm = TRUE)
+          # Remplacement des valeurs manquantes par la médiane
+          } else if (method == "median" && is.numeric(df[[var]])) {
+            df[[var]][is.na(df[[var]])] <- median(df[[var]], na.rm = TRUE)
+          # Remplacement des valeurs manquantes par la valeur la plus fréquente
+          } else if (method == "mode") {
+            mode_value <- as.numeric(names(sort(table(df[[var]]), decreasing = TRUE)[1]))
+            df[[var]][is.na(df[[var]])] <- mode_value
+          # Suppression des lignes avec des valeurs manquantes
+          } else if (method == "remove") {
+            df <- df[complete.cases(df), ]
+          }
+        }
+      }
+      
+      self$data <- df
+      print("[INFO] Les valeurs manquantes ont été gérées avec succès.")
     },
     
     # Fonction de préparation des données
@@ -59,7 +87,7 @@ DataPreparer <- R6Class("DataPreparer",
       df[[self$target]] <- as.numeric(df[[self$target]]) - 1
       
       # Gestion des variables prédictives
-      new_columns <- list()  # Pour stocker les colonnes encodées
+      new_columns <- list()
       for (var in self$predictors) {
         if (is.factor(df[[var]]) || is.character(df[[var]])) {
           # Encodage one-hot pour les variables catégoriques
@@ -87,6 +115,16 @@ DataPreparer <- R6Class("DataPreparer",
     get_prepared_data = function() {
       if (is.null(self$prepared_data)) stop("[Attention] Les données n'ont pas encore été préparées. Appelez prepare_data() d'abord.")
       return(self$prepared_data)
+    },
+
+    # Fonction pour afficher les données préparées et des statistiques
+    display_data = function() {
+      if (is.null(self$prepared_data)) stop("[Attention] Les données n'ont pas encore été préparées. Appelez prepare_data() d'abord.")
+      print("[INFO] Données préparées :")
+      print(self$prepared_data)
+      
+      print("[INFO] Statistiques des données préparées :")
+      print(summary(self$prepared_data))
     }
   )
 )
@@ -106,6 +144,10 @@ preparer <- DataPreparer$new(
   target = "target",
   predictors = c("var1", "var2")
 )
+preparer$handle_missing_values(method = "mean")
 preparer$prepare_data()
 prepared_data <- preparer$get_prepared_data()
-print(prepared_data)
+preparer$display_data()
+
+# Avertissements valeurs manquantes
+# Traitement des valeurs manquantes
