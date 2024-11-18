@@ -59,13 +59,22 @@ DataPreparer <- R6Class("DataPreparer",
       df[[self$target]] <- as.numeric(df[[self$target]]) - 1
       
       # Gestion des variables prédictives
+      new_columns <- list()  # Pour stocker les colonnes encodées
       for (var in self$predictors) {
         if (is.factor(df[[var]]) || is.character(df[[var]])) {
           # Encodage one-hot pour les variables catégoriques
-          encoded <- model.matrix(~ . - 1, data = df[var])
-          df <- cbind(df, encoded)
+          levels_var <- unique(df[[var]])
+          for (lvl in levels_var) {
+            col_name <- paste0(var, "=", lvl)
+            new_columns[[col_name]] <- as.numeric(df[[var]] == lvl)
+          }
           df[[var]] <- NULL
         }
+      }
+      
+      # Ajout des nouvelles colonnes au dataframe
+      for (col_name in names(new_columns)) {
+        df[[col_name]] <- new_columns[[col_name]]
       }
       
       self$prepared_data <- df # Sauvegarde des données préparées
@@ -81,3 +90,22 @@ DataPreparer <- R6Class("DataPreparer",
     }
   )
 )
+
+data <- matrix(
+  c("A", 1.2, "X",
+    "B", 3.4, "Y",
+    "A", 5.6, "X",
+    "C", 2.3, "Z"),
+  ncol = 3, byrow = TRUE
+)
+colnames(data) <- c("target", "var1", "var2")
+
+preparer <- DataPreparer$new(
+  import_from_file = FALSE,
+  data = data,
+  target = "target",
+  predictors = c("var1", "var2")
+)
+preparer$prepare_data()
+prepared_data <- preparer$get_prepared_data()
+print(prepared_data)
