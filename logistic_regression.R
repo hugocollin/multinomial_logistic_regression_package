@@ -21,22 +21,10 @@ LogisticRegression <- R6Class("LogisticRegression",
       if (!is.data.frame(X)) stop("X doit être un data frame")
       if (!is.factor(y) && !is.character(y)) stop("y doit être un facteur ou un vecteur de caractères")
       
-      y <- as.factor(y)  # Conversion en facteur si nécessaire
       self$class_labels <- levels(y)
       self$class_frequencies <- table(y) / length(y)
       
-      # Préparation des données
       
-      non_numeric_vars <- sapply(X, function(x) !is.numeric(x))
-      non_numeric_columns <- names(X)[non_numeric_vars]
-      print("Variables non numériques :")
-      print(non_numeric_columns)
-      
-      # Encoder les variables non numériques
-      encoded_data <- model.matrix(~ . - 1, data = X[, non_numeric_columns])
-      
-      # Combiner avec les variables numériques
-      final_data <- cbind(X[, sapply(X, is.numeric)], encoded_data)
       X <- cbind(1, as.matrix(final_data))  # Ajout de l'intercept
       
       
@@ -105,6 +93,32 @@ LogisticRegression <- R6Class("LogisticRegression",
 titanic <- as.data.frame(Titanic)
 X <- titanic[, !names(titanic) %in% "Survived"]
 y <- titanic$Survived
-logit_model = LogisticRegression$new()
-logit_model$fit(X, y)
 
+n <- nrow(titanic)
+
+set.seed(123)  # Assure la reproductibilité
+train_indices <- sample(1:n, size = 0.7 * n)  # 70% des données pour le train
+
+X_train <- X[train_indices, ]
+y_train <- y[train_indices]
+X_test <- X[-train_indices, ]
+y_test <- y[-train_indices]
+
+# Vérifier les formats
+X_train <- model.matrix(~ . - 1, data = X_train)  # Encodage one-hot
+X_test <- model.matrix(~ . - 1, data = X_test)
+y_train <- factor(y_train)  # Assurez-vous que y est un facteur
+y_test <- factor(y_test)
+
+X_train <- as.data.frame(X_train)
+X_test <- as.data.frame(X_test)
+
+logit_model = LogisticRegression$new()
+logit_model$fit(X_train, y_train)
+
+print(logit_model)
+logit_model$summary()
+
+predictions <- logit_model$predict(X_test)
+accuracy <- mean(predictions == y_test)
+cat("Accuracy sur l'ensemble de test :", accuracy, "\n")
