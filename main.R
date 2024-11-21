@@ -32,13 +32,14 @@ DataPreparer <- R6Class("DataPreparer",
         inconsistant_rows <- which(sapply(split_lines, length) != num_cols)
 
         if (num_cols < 2) {
-          print("test")
           stop("[Attention] Échec du chargement du fichier CSV avec le délimiteur '", delimiter, "'.", sep = "")
         }
         
         if (length(inconsistant_rows) > 0) {
           problematic_lines <- lines[inconsistant_rows]
-          stop(paste0("[Attention] Incohérence détectée dans le nombre de colonnes du fichier CSV à la/les ligne(s) : ",
+          final_text <- ifelse(length(inconsistant_rows) == 1, "à la ligne", "aux lignes")
+          stop(paste0("[Attention] Incohérence détectée dans le nombre de colonnes du fichier CSV ",
+                      final_text, " : ",
                       paste(inconsistant_rows, collapse = ", "), "."))
         }
       
