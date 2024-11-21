@@ -1,5 +1,5 @@
-target|var1|var2
-A|1.2|X
-B|3.4|Y
-A|5.6|X
-C|2.3|Z
+target|var1|var2|var3
+A|1.2|X|hey
+B|3.4|Y|hoy
+A|5.6|X|hay
+C|2.3|Z|huy

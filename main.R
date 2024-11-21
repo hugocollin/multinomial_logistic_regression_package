@@ -13,7 +13,7 @@ DataPreparer <- R6Class("DataPreparer",
     levels_map = NULL,    # Mapping des niveaux des variables catégoriques
     
     # Constructeur de la classe
-    initialize = function(file_path = NULL, data = NULL, target, predictors, delimiter = ",") {
+    initialize = function(file_path, data, target, columns_to_remove, delimiter) {
       # Chargement d'un fichier CSV
       if (grepl("\\.csv$", file_path, ignore.case = TRUE)) {
         # Lecture du fichier avec le délimiteur spécifié
@@ -49,16 +49,35 @@ DataPreparer <- R6Class("DataPreparer",
       } else {
         stop("[Attention] Format de fichier non supporté, utilisez un fichier .csv ou .xlsx.")
       }
-      print("[INFO] Les données ont été chargées avec succès.")
       
-      # Vérification des colonnes
-      if (!target %in% colnames(data)) stop("[Attention] La variable cible n'existe pas dans le jeu de données.")
-      if (!all(predictors %in% colnames(data))) stop("[Attention] Certaines variables prédictives sont manquantes.")
+      # Vérification de la colonne cible
+      if (!target %in% colnames(data)) {
+        stop("[Attention] La variable cible n'existe pas dans le jeu de données.")
+      }
+      
+      # Vérification des colonnes à supprimer
+      if (!is.null(columns_to_remove)) {
+        missing_cols <- setdiff(columns_to_remove, colnames(data))
+        if (length(missing_cols) > 0) {
+          stop(paste0("[Attention] Les colonnes suivantes à supprimer n'existent pas dans le jeu de données : ",
+                      paste(missing_cols, collapse = ", "), "."))
+        }
+        data <- data[, !(colnames(data) %in% columns_to_remove), drop = FALSE]
+      }
+      
+      # Définition des colonnes de prédiction
+      self$predictors <- setdiff(colnames(data), c(target, columns_to_remove))
+      
+      # Vérification qu'il y a au moins une colonne prédictive
+      if (length(self$predictors) == 0) {
+        stop("[Attention] Aucun prédicteur disponible après suppression des colonnes spécifiées.")
+      }
       
       self$data <- data             # Sauvegarde des données
       self$target <- target         # Sauvegarde de la variable cible
-      self$predictors <- predictors # Sauvegarde des variables prédictives
       self$levels_map <- list()     # Initialisation du mapping des niveaux
+
+      print("[INFO] Les données ont été chargées avec succès.")
     },
 
     # Fonction de gestion des valeurs manquantes
@@ -68,19 +87,24 @@ DataPreparer <- R6Class("DataPreparer",
       
       for (var in colnames(df)) {
         if (any(is.na(df[[var]]))) {
-          # Remplacement des valeurs manquantes par la moyenne
-          if (method == "mean" && is.numeric(df[[var]])) {
-            df[[var]][is.na(df[[var]])] <- mean(df[[var]], na.rm = TRUE)
-          # Remplacement des valeurs manquantes par la médiane
-          } else if (method == "median" && is.numeric(df[[var]])) {
-            df[[var]][is.na(df[[var]])] <- median(df[[var]], na.rm = TRUE)
-          # Remplacement des valeurs manquantes par la valeur la plus fréquente
-          } else if (method == "mode") {
-            mode_value <- as.numeric(names(sort(table(df[[var]]), decreasing = TRUE)[1]))
-            df[[var]][is.na(df[[var]])] <- mode_value
-          # Suppression des lignes avec des valeurs manquantes
-          } else if (method == "remove") {
-            df <- df[complete.cases(df), ]
+          if (is.numeric(df[[var]])) {
+            if (method == "mean") {
+              df[[var]][is.na(df[[var]])] <- mean(df[[var]], na.rm = TRUE)
+            } else if (method == "median") {
+              df[[var]][is.na(df[[var]])] <- median(df[[var]], na.rm = TRUE)
+            } else if (method == "mode") {
+              mode_value <- as.numeric(names(sort(table(df[[var]]), decreasing = TRUE)[1]))
+              df[[var]][is.na(df[[var]])] <- mode_value
+            } else if (method == "remove") {
+              df <- df[complete.cases(df), ]
+            }
+          } else if (is.factor(df[[var]]) || is.character(df[[var]])) {
+            if (method == "mode") {
+              mode_value <- names(sort(table(df[[var]]), decreasing = TRUE))[1]
+              df[[var]][is.na(df[[var]])] <- mode_value
+            } else if (method == "remove") {
+              df <- df[!is.na(df[[var]]), ]
+            }
           }
         }
       }
@@ -154,7 +178,7 @@ DataPreparer <- R6Class("DataPreparer",
 preparer <- DataPreparer$new(
   file_path = "test.csv",
   target = "target",
-  predictors = c("var1", "var2"),
+  columns_to_remove = c("var3"),
   delimiter = "|"
 )
 preparer$handle_missing_values(method = "mean")
