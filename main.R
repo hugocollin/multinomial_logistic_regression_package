@@ -73,9 +73,9 @@ DataPreparer <- R6Class("DataPreparer",
         stop("[Attention] Aucun prédicteur disponible après suppression des colonnes spécifiées.")
       }
       
-      self$data <- data             # Sauvegarde des données
-      self$target <- target         # Sauvegarde de la variable cible
-      self$levels_map <- list()     # Initialisation du mapping des niveaux
+      self$data <- data         # Sauvegarde des données
+      self$target <- target     # Sauvegarde de la variable cible
+      self$levels_map <- list() # Initialisation du mapping des niveaux
 
       print("[INFO] Les données ont été chargées avec succès.")
     },
@@ -87,6 +87,7 @@ DataPreparer <- R6Class("DataPreparer",
       
       for (var in colnames(df)) {
         if (any(is.na(df[[var]]))) {
+          # Gestion des valeurs manquantes pour les variables numériques
           if (is.numeric(df[[var]])) {
             if (method == "mean") {
               df[[var]][is.na(df[[var]])] <- mean(df[[var]], na.rm = TRUE)
@@ -98,6 +99,7 @@ DataPreparer <- R6Class("DataPreparer",
             } else if (method == "remove") {
               df <- df[complete.cases(df), ]
             }
+          # Gestion des valeurs manquantes pour les variables catégorielles
           } else if (is.factor(df[[var]]) || is.character(df[[var]])) {
             if (method == "mode") {
               mode_value <- names(sort(table(df[[var]]), decreasing = TRUE))[1]
