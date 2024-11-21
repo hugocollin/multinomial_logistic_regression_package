@@ -13,20 +13,46 @@ DataPreparer <- R6Class("DataPreparer",
     levels_map = NULL,    # Mapping des niveaux des variables catégoriques
     
     # Constructeur de la classe
-    initialize = function(file_path = NULL, data = NULL, target, predictors) {
-        # Chargement du fichier
-        if (grepl("\\.csv$", file_path, ignore.case = TRUE)) {
-          data <- read_csv(file_path)
-        } else if (grepl("\\.xlsx$", file_path, ignore.case = TRUE)) {
-          data <- read_excel(file_path)
-        } else {
-          stop("[Attention] Format de fichier non supporté, utilisez un fichier .csv ou .xlsx.")
+    initialize = function(file_path = NULL, data = NULL, target, predictors, delimiter = ",") {
+      # Chargement d'un fichier CSV
+      if (grepl("\\.csv$", file_path, ignore.case = TRUE)) {
+        # Lecture du fichier avec le délimiteur spécifié
+        tryCatch({
+          data <- read_delim(file_path, delim = delimiter, col_types = cols(), progress = FALSE)
+        }, error = function(e) {
+          stop(paste("[Attention] Échec du chargement du fichier CSV avec le délimiteur '", delimiter, "'.", sep = ""))
+        })
+        
+        # Vérification de la cohérence des colonnes
+        lines <- read_lines(file_path)
+        lines <- trimws(lines)
+        lines <- lines[nchar(lines) > 0]
+        split_lines <- strsplit(lines, delimiter, fixed = TRUE)
+        num_cols <- length(split_lines[[1]])
+        inconsistant_rows <- which(sapply(split_lines, length) != num_cols)
+
+        if (num_cols < 2) {
+          print("test")
+          stop("[Attention] Échec du chargement du fichier CSV avec le délimiteur '", delimiter, "'.", sep = "")
         }
+        
+        if (length(inconsistant_rows) > 0) {
+          problematic_lines <- lines[inconsistant_rows]
+          stop(paste0("[Attention] Incohérence détectée dans le nombre de colonnes du fichier CSV à la/les ligne(s) : ",
+                      paste(inconsistant_rows, collapse = ", "), "."))
+        }
+      
+      # Chargement d'un fichier Excel
+      } else if (grepl("\\.xlsx$", file_path, ignore.case = TRUE)) {
+        data <- read_excel(file_path)
+      } else {
+        stop("[Attention] Format de fichier non supporté, utilisez un fichier .csv ou .xlsx.")
+      }
       print("[INFO] Les données ont été chargées avec succès.")
       
       # Vérification des colonnes
       if (!target %in% colnames(data)) stop("[Attention] La variable cible n'existe pas dans le jeu de données.")
-      if (!all(predictors %in% colnames(data))) stop("[Attention] Certaines variables prédictives sont manquantes")
+      if (!all(predictors %in% colnames(data))) stop("[Attention] Certaines variables prédictives sont manquantes.")
       
       self$data <- data             # Sauvegarde des données
       self$target <- target         # Sauvegarde de la variable cible
@@ -127,7 +153,8 @@ DataPreparer <- R6Class("DataPreparer",
 preparer <- DataPreparer$new(
   file_path = "test.csv",
   target = "target",
-  predictors = c("var1", "var2")
+  predictors = c("var1", "var2"),
+  delimiter = "|"
 )
 preparer$handle_missing_values(method = "mean")
 preparer$prepare_data()
