@@ -13,10 +13,8 @@ DataPreparer <- R6Class("DataPreparer",
     levels_map = NULL,    # Mapping des niveaux des variables catégoriques
     
     # Constructeur de la classe
-    initialize = function(import_from_file = FALSE, file_path = NULL, data = NULL, target, predictors) {
-      if (import_from_file) {
-        # Chargement du fichier import_from_file est TRUE
-        if (is.null(file_path)) stop("[Attention] Le chemin du fichier doit être fourni si import_from_file est TRUE.")
+    initialize = function(file_path = NULL, data = NULL, target, predictors) {
+        # Chargement du fichier
         if (grepl("\\.csv$", file_path, ignore.case = TRUE)) {
           data <- read_csv(file_path)
         } else if (grepl("\\.xlsx$", file_path, ignore.case = TRUE)) {
@@ -24,17 +22,6 @@ DataPreparer <- R6Class("DataPreparer",
         } else {
           stop("[Attention] Format de fichier non supporté, utilisez un fichier .csv ou .xlsx.")
         }
-      } else {
-        # Vérification et convertion des données si import_from_file est FALSE
-        if (is.null(data)) stop("[Attention] Les données doivent être fournies si import_from_file est FALSE.")
-        if (!inherits(data, "data.frame")) {
-          if (is.matrix(data)) {
-            data <- as.data.frame(data)
-          } else {
-            stop("[Attention] Les données doivent être un dataframe ou une matrice.")
-          }
-        }
-      }
       print("[INFO] Les données ont été chargées avec succès.")
       
       # Vérification des colonnes
@@ -111,15 +98,22 @@ DataPreparer <- R6Class("DataPreparer",
       print("[INFO] Les données ont été préparées avec succès.")
     },
     
-    # Fonction pour obtenir les données préparées
+    # Fonction pour obtenir les données préparées séparément
     get_prepared_data = function() {
-      if (is.null(self$prepared_data)) stop("[Attention] Les données n'ont pas encore été préparées. Appelez prepare_data() d'abord.")
-      return(self$prepared_data)
+      if (is.null(self$prepared_data)) {
+        stop("[Attention] Les données n'ont pas encore été préparées. Appelez prepare_data() d'abord.")
+      }
+      # Séparation de la variable cible et des prédicteurs
+      y <- self$prepared_data[[self$target]]
+      X <- self$prepared_data[, !colnames(self$prepared_data) %in% self$target, drop = FALSE]
+      return(list(X = X, y = y))
     },
 
     # Fonction pour afficher les données préparées et des statistiques
     display_data = function() {
-      if (is.null(self$prepared_data)) stop("[Attention] Les données n'ont pas encore été préparées. Appelez prepare_data() d'abord.")
+      if (is.null(self$prepared_data)) {
+        stop("[Attention] Les données n'ont pas encore été préparées. Appelez prepare_data() d'abord.")
+      }
       print("[INFO] Données préparées :")
       print(self$prepared_data)
       
@@ -129,18 +123,9 @@ DataPreparer <- R6Class("DataPreparer",
   )
 )
 
-data <- matrix(
-  c("A", 1.2, "X",
-    "B", 3.4, "Y",
-    "A", 5.6, "X",
-    "C", 2.3, "Z"),
-  ncol = 3, byrow = TRUE
-)
-colnames(data) <- c("target", "var1", "var2")
-
+# Exemple d'utilisation avec un fichier CSV
 preparer <- DataPreparer$new(
-  import_from_file = FALSE,
-  data = data,
+  file_path = "test.csv",
   target = "target",
   predictors = c("var1", "var2")
 )
@@ -149,5 +134,12 @@ preparer$prepare_data()
 prepared_data <- preparer$get_prepared_data()
 preparer$display_data()
 
-# Avertissements valeurs manquantes
-# Traitement des valeurs manquantes
+# Accès aux données prédictives et à la variable cible
+X <- prepared_data$X
+y <- prepared_data$y
+
+print("Données prédictives (X) :")
+print(X)
+
+print("Variable cible (y) :")
+print(y)
