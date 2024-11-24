@@ -115,7 +115,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     },
     
     # Fonction de préparation des données
-    prepare_data = function(test_size) {
+    prepare_data = function(test_size, scale=TRUE) {
       data <- self$data
       
       # Encodage de la variable cible (facteur -> indices numériques)
@@ -153,6 +153,12 @@ LogisticRegression <- R6Class("LogisticRegression",
       X <- data[, !colnames(data) %in% self$target, drop = FALSE]
       n <- nrow(X)
       
+      # Normalisation des variables numériques
+      if (scale) {
+        numeric_vars <- sapply(X, is.numeric)
+        X[, numeric_vars] <- scale(X[, numeric_vars])
+      }
+      
       # Séparation des données en ensembles d'entraînement et de test
       set.seed(123)
       indices <- sample(1:n, size = floor(n * (1 - test_size)))
@@ -170,54 +176,109 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$X_test <- X_test
       self$y_test <- y_test
     },
-
-    # Fonction fit : Ajustement du modèle
-    fit = function(learning_rate, max_iter) {
+    
+    
+    fit = function(learning_rate = 0.001, max_iter = 1000, batch_size = 68, tol = 1e-6) {
       # Récupération des données préparées
-      y <- self$y_train
+      y <- self$y_train  # Y est déjà encodé en one-hot
       X <- self$X_train
-
+      
       # Initialisation des attributs du modèle
       self$class_labels <- self$levels_map[[self$target]]
       self$class_frequencies <- table(y) / length(y)
       
       # Ajout de l'intercept
-      X <- cbind(1, as.matrix(X))
+      X <- cbind(1, as.matrix(X))  # Ajout d'une colonne d'intercept
       
-      # Initialisation des coefficients
-      coefficients <- matrix(0, ncol = 1, nrow = ncol(X))
+      # Initialisation des coefficients (une colonne pour chaque classe)
+      num_classes <- ncol(y)  # Le nombre de classes est le nombre de colonnes dans y (car y est one-hot)
+      print(num_classes)
       
-      # Calcul de la descente de gradient
+      coefficients <- matrix(0, ncol = num_classes, nrow = ncol(X))
+      epsilon <- 1e-15  # Pour éviter les log(0)
+      
+      # Variables de convergence
+      prev_log_likelihood <- -Inf  # Log-vraisemblance initiale
+      
       for (i in 1:max_iter) {
-        predictions <- 1 / (1 + exp(-X %*% coefficients))
-        gradient <- t(X) %*% (predictions - y)
-        coefficients <- coefficients - learning_rate * gradient
+        # Mélange des indices pour créer des mini-batchs
+        indices <- sample(1:nrow(X))
+        
+        for (batch_start in seq(1, nrow(X), by = batch_size)) {
+          # Sélection d'un mini-lot
+          batch_end <- min(batch_start + batch_size - 1, nrow(X))
+          batch_indices <- indices[batch_start:batch_end]
+          
+          X_batch <- X[batch_indices, , drop = FALSE]
+          y_batch <- y[batch_indices, , drop = FALSE]  # y_batch est déjà one-hot
+          
+          # Calcul des prédictions avec Softmax
+          scores <- X_batch %*% coefficients  # Score brut (logits)
+          exp_scores <- exp(scores - apply(scores, 1, max))  # Eviter overflow
+          softmax_probs <- exp_scores / rowSums(exp_scores)  # Normalisation Softmax
+          
+          # Calcul du gradient pour ce mini-lot
+          gradient <- t(X_batch) %*% (softmax_probs - y_batch)
+          
+          # Mise à jour des coefficients
+          coefficients <- coefficients - learning_rate * gradient
+        }
+        
+        # Calcul de la log-vraisemblance pour vérifier la convergence
+        scores <- X %*% coefficients
+        exp_scores <- exp(scores - apply(scores, 1, max))  # Eviter overflow
+        softmax_probs <- exp_scores / rowSums(exp_scores)  # Normalisation Softmax
+        log_likelihood <- sum(y * log(pmax(softmax_probs, epsilon)))
+        
+        # Vérification de la convergence
+        if (abs(log_likelihood - prev_log_likelihood) < tol) {
+          cat("Convergence atteinte à l'itération", i, "avec la log-vraisemblance:", log_likelihood, "\n")
+          break
+        }
+        
+        prev_log_likelihood <- log_likelihood
+        
+        # Affichage du progrès toutes les 100 itérations
+        if (i %% 100 == 0) {
+          cat("Iteration:", i, "Log-Likelihood:", log_likelihood, "\n")
+        }
       }
       
       self$coefficients <- coefficients
     },
-
+    
+    
+    
     # Fonction predict : Prédiction des classes
     predict = function() {
       # Récupération des données de test
       X <- self$X_test
-
+      
       # Ajout de l'intercept
       X <- cbind(1, as.matrix(X))
-
-      # Prédiction des probabilités
-      probs <- 1 / (1 + exp(-X %*% self$coefficients))
-
-      # Prédiction des classes
-      predicted_targets <- ifelse(probs > 0.5, self$class_labels[2], self$class_labels[1])
-
-      self$predicted_targets <- predicted_targets
-
+      
+      # Prédiction des scores pour chaque classe
+      scores <- X %*% self$coefficients  # Matrice de scores pour chaque classe
+      
+      # Application de Softmax pour obtenir les probabilités
+      exp_scores <- exp(scores - apply(scores, 1, max))  # Eviter overflow numérique
+      softmax_probs <- exp_scores / rowSums(exp_scores)  # Normalisation pour Softmax
+      
+      # Prédiction des classes (classe ayant la probabilité maximale)
+      predicted_classes <- apply(softmax_probs, 1, which.max) - 1  # Récupère la classe avec la probabilité maximale
+      
+      self$predicted_targets <- self$class_labels[predicted_classes + 1]  # Ajouter 1 pour correspondre aux labels
+      
+      # Affichage des probabilités pour les premières 10 prédictions
+      cat("Probabilités (premières 10) :", head(softmax_probs, 10), "\n")
+      
       # Calcul de la précision
-      accuracy <- mean(predicted_targets == self$y_test)
-
+      accuracy <- mean(predicted_classes == self$y_test)
+      
+      # Retourner l'accuracy et les prédictions des classes
       return(accuracy)
     }
+    
     
     # # Méthode predict_proba : Prédiction des probabilités
     # predict_proba = function(X) {
