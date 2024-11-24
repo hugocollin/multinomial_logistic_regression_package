@@ -18,6 +18,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     predictors = NULL,
     target = NULL,
     predicted_targets = NULL,
+    accuracy = NULL,
     coefficients = NULL,
     levels_map = NULL,
     class_labels = NULL,
@@ -214,9 +215,9 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$predicted_targets <- predicted_targets
 
       # Calcul de la précision
-      accuracy <- mean(predicted_targets == self$y_test)
+      self$accuracy <- mean(predicted_targets == self$y_test)
 
-      return(accuracy)
+      return(self$accuracy)
     }
     
     # # Méthode predict_proba : Prédiction des probabilités

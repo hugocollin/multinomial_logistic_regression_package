@@ -4,6 +4,7 @@ source("model.R")
 # Importation des bibliothèques nécessaires
 library(DT)
 library(shiny)
+library(shinythemes)
 library(shinyjs)
 library(readxl)
 
@@ -12,6 +13,7 @@ options(shiny.maxRequestSize = 1 * 1024^3)
 
 # Interface utilisateur
 ui <- fluidPage(
+  theme = shinytheme("cosmo"),
   useShinyjs(),
 
   tags$h1("Multinomial Logistic Regression", style = "text-align: center;"),
@@ -98,6 +100,7 @@ ui <- fluidPage(
     ),
     
     mainPanel(
+      class = "main-panel",
       verbatimTextOutput("output"),
       DT::dataTableOutput("data_preview"),
       DT::dataTableOutput("predictions")
@@ -333,14 +336,16 @@ server <- function(input, output, session) {
   
   # Prédiction des classes
   observeEvent(input$predict, {
-    # Prédiction des classes
     tryCatch({
-      rv$model$predict()
-      output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(rv$model$accuracy * 100, 2), "%."))
+      # Prédiction des classes et récupération de l'accuracy
+      accuracy <- rv$model$predict()
+      output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), "%."))
       rv$predictions <- rv$model$predicted_targets
+      rv$accuracy <- accuracy
     }, error = function(e) {
       output$output <- renderText(paste("[ERROR]", e$message))
       rv$predictions <- NULL
+      rv$accuracy <- NULL
     })
   })
 
