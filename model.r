@@ -17,6 +17,8 @@ LogisticRegression <- R6Class("LogisticRegression",
     y_test = NULL,
     predictors = NULL,
     target = NULL,
+    missing_values = NULL,
+    missing_values_percent = NULL,
     predicted_targets = NULL,
     accuracy = NULL,
     coefficients = NULL,
@@ -75,6 +77,10 @@ LogisticRegression <- R6Class("LogisticRegression",
       if (!(target %in% colnames(data))) {
         stop(paste("[Warning] You cannot remove the target column."))
       }
+
+      # Calcul du nombre de valeurs manquantes et du pourcentage
+      self$missing_values <- sum(is.na(data))
+      self$missing_values_percent <- self$missing_values / (nrow(data) * ncol(data)) * 100
       
       self$data <- data
       self$target <- target
@@ -116,6 +122,10 @@ LogisticRegression <- R6Class("LogisticRegression",
           }
         }
       }
+      
+      # Calcul du nombre de valeurs manquantes et du pourcentage
+      self$missing_values <- sum(is.na(data))
+      self$missing_values_percent <- self$missing_values / (nrow(data) * ncol(data)) * 100
       
       self$data <- data
     },

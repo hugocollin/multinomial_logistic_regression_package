@@ -109,6 +109,7 @@ ui <- fluidPage(
     mainPanel(
       class = "main-panel",
       verbatimTextOutput("output"),
+      verbatimTextOutput("missing_info"),
       DT::dataTableOutput("data_preview"),
       DT::dataTableOutput("predictions")
     )
@@ -133,6 +134,7 @@ server <- function(input, output, session) {
     disable("max_iter")
     disable("fit_model")
     disable("predict")
+    output$missing_info <- renderText(NULL)
     rv$model <- NULL
     rv$predictions <- NULL
 
@@ -221,6 +223,12 @@ server <- function(input, output, session) {
       )
 
       output$output <- renderText("[INFO] The data has been successfully configured.")
+      output$missing_info <- renderText({
+        paste0(
+          "[DATA INFO] Number of missing values : ", rv$model$missing_values, "\n",
+          "[DATA INFO] Percentage of missing values : ", round(rv$model$missing_values_percent, 2), " %"
+        )
+      })
 
       # Activation de l'interface
       enable("handle_missing_num_method")
@@ -273,6 +281,12 @@ server <- function(input, output, session) {
       } else {
         output$output <- renderText("[WARNING] Please choose at least one method to handle missing values.")
       }
+      output$missing_info <- renderText({
+        paste0(
+          "[DATA INFO] Number of missing values : ", rv$model$missing_values, "\n",
+          "[DATA INFO] Percentage of missing values : ", round(rv$model$missing_values_percent, 2), " %"
+        )
+      })
       rv$trigger <- rv$trigger + 1
     }, error = function(e) {
       output$output <- renderText(paste("[ERROR]", e$message))
@@ -360,7 +374,7 @@ server <- function(input, output, session) {
     tryCatch({
       # Prédiction des classes et récupération de l'accuracy
       accuracy <- rv$model$predict()
-      output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), "%."))
+      output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), " %."))
       rv$predictions <- rv$model$predicted_targets
       rv$accuracy <- accuracy
     }, error = function(e) {
