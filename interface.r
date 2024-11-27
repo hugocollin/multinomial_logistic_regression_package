@@ -4,6 +4,7 @@ source("model.R")
 # Importation des bibliothèques nécessaires
 library(DT)
 library(shiny)
+library(shinythemes)
 library(shinyjs)
 library(readxl)
 
@@ -12,6 +13,7 @@ options(shiny.maxRequestSize = 1 * 1024^3)
 
 # Interface utilisateur
 ui <- fluidPage(
+  theme = shinytheme("cosmo"),
   useShinyjs(),
 
   tags$h1("Multinomial Logistic Regression", style = "text-align: center;"),
@@ -50,12 +52,19 @@ ui <- fluidPage(
           )),
           disabled(actionButton("param_data", "Validate data parameters", width = "100%")),
           p(tags$b("Handle missing values (optional)"), style = "text-align: center;"),
-          p("Handle missing method"),
+          p("Handle missing numeric values method"),
           disabled(selectInput(
-            "handle_missing_method",
+            "handle_missing_num_method",
             label = NULL,
-            choices = c("Mean" = "mean", "Median" = "median", "Mode" = "mode", "Remove" = "remove"),
-            selected = "mean"
+            choices = c("None" = "none", "Mean" = "mean", "Median" = "median", "Mode" = "mode", "Remove" = "remove"),
+            selected = "none"
+          )),
+          p("Handle missing categorical values method"),
+          disabled(selectInput(
+            "handle_missing_cat_method",
+            label = NULL,
+            choices = c("None" = "none", "Mode" = "mode", "Remove" = "remove"),
+            selected = "none"
           )),
           disabled(actionButton("handle_missing", "Handle missing values", width = "100%"))
         ),
@@ -98,7 +107,9 @@ ui <- fluidPage(
     ),
     
     mainPanel(
+      class = "main-panel",
       verbatimTextOutput("output"),
+      verbatimTextOutput("missing_info"),
       DT::dataTableOutput("data_preview"),
       DT::dataTableOutput("predictions")
     )
@@ -114,7 +125,8 @@ server <- function(input, output, session) {
     disable("target")
     disable("remove_cols")
     disable("param_data")
-    disable("handle_missing_method")
+    disable("handle_missing_num_method")
+    disable("handle_missing_cat_method")
     disable("handle_missing")
     disable("test_size")
     disable("prepare_data")
@@ -122,6 +134,7 @@ server <- function(input, output, session) {
     disable("max_iter")
     disable("fit_model")
     disable("predict")
+    output$missing_info <- renderText(NULL)
     rv$model <- NULL
     rv$predictions <- NULL
 
@@ -162,7 +175,8 @@ server <- function(input, output, session) {
       disable("target")
       disable("remove_cols")
       disable("param_data")
-      disable("handle_missing_method")
+      disable("handle_missing_num_method")
+      disable("handle_missing_cat_method")
       disable("handle_missing")
       disable("test_size")
       disable("prepare_data")
@@ -178,7 +192,8 @@ server <- function(input, output, session) {
   # Paramétrage des données
   observeEvent(input$param_data, {
     # Réinitialisation de l'interface
-    disable("handle_missing_method")
+    disable("handle_missing_num_method")
+    disable("handle_missing_cat_method")
     disable("handle_missing")
     disable("test_size")
     disable("prepare_data")
@@ -208,9 +223,16 @@ server <- function(input, output, session) {
       )
 
       output$output <- renderText("[INFO] The data has been successfully configured.")
+      output$missing_info <- renderText({
+        paste0(
+          "[DATA INFO] Number of missing values : ", rv$model$missing_values, "\n",
+          "[DATA INFO] Percentage of missing values : ", round(rv$model$missing_values_percent, 2), " %"
+        )
+      })
 
       # Activation de l'interface
-      enable("handle_missing_method")
+      enable("handle_missing_num_method")
+      enable("handle_missing_cat_method")
       enable("handle_missing")
       enable("test_size")
       enable("prepare_data")
@@ -220,7 +242,8 @@ server <- function(input, output, session) {
       output$output <- renderText(paste("[ERROR]", e$message))
       
       # Désactivation de l'interface
-      disable("handle_missing_method")
+      disable("handle_missing_num_method")
+      disable("handle_missing_cat_method")
       disable("handle_missing")
       disable("test_size")
       disable("prepare_data")
@@ -239,16 +262,31 @@ server <- function(input, output, session) {
     disable("fit_model")
     disable("predict")
 
-    # Récupération de la méthode sélectionnée par l'utilisateur
-    selected_method <- input$handle_missing_method
+    # Récupération des méthodes sélectionnées par l'utilisateur
+    selected_num_method <- input$handle_missing_num_method
+    selected_cat_method <- input$handle_missing_cat_method
     
-    # Vérification que la méthode est bien sélectionnée
-    req(selected_method)
+    # Vérification que les méthodes sont bien sélectionnées
+    req(selected_num_method, selected_cat_method)
     
     # Gestion des valeurs manquantes avec la méthode sélectionnée
     tryCatch({
-      rv$model$handle_missing_values(method = selected_method)
-      output$output <- renderText(paste("[INFO] The missing values have been successfully handled using the", selected_method, "method."))
+      rv$model$handle_missing_values(num_method = selected_num_method, cat_method = selected_cat_method)
+      if (selected_num_method != "none" && selected_cat_method != "none") {
+        output$output <- renderText(paste("[INFO] The missing values have been successfully handled using the", selected_num_method, "method for numeric values and the", selected_cat_method, "method for categorical values."))
+      } else if (selected_num_method != "none") {
+        output$output <- renderText(paste("[INFO] The missing values have been successfully handled using the", selected_num_method, "method for numeric values."))
+      } else if (selected_cat_method != "none") {
+        output$output <- renderText(paste("[INFO] The missing values have been successfully handled using the", selected_cat_method, "method for categorical values."))
+      } else {
+        output$output <- renderText("[WARNING] Please choose at least one method to handle missing values.")
+      }
+      output$missing_info <- renderText({
+        paste0(
+          "[DATA INFO] Number of missing values : ", rv$model$missing_values, "\n",
+          "[DATA INFO] Percentage of missing values : ", round(rv$model$missing_values_percent, 2), " %"
+        )
+      })
       rv$trigger <- rv$trigger + 1
     }, error = function(e) {
       output$output <- renderText(paste("[ERROR]", e$message))
@@ -333,14 +371,16 @@ server <- function(input, output, session) {
   
   # Prédiction des classes
   observeEvent(input$predict, {
-    # Prédiction des classes
     tryCatch({
-      rv$model$predict()
-      output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(rv$model$accuracy * 100, 2), "%."))
+      # Prédiction des classes et récupération de l'accuracy
+      accuracy <- rv$model$predict()
+      output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), " %."))
       rv$predictions <- rv$model$predicted_targets
+      rv$accuracy <- accuracy
     }, error = function(e) {
       output$output <- renderText(paste("[ERROR]", e$message))
       rv$predictions <- NULL
+      rv$accuracy <- NULL
     })
   })
 

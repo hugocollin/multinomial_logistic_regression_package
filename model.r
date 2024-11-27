@@ -17,7 +17,10 @@ LogisticRegression <- R6Class("LogisticRegression",
     y_test = NULL,
     predictors = NULL,
     target = NULL,
+    missing_values = NULL,
+    missing_values_percent = NULL,
     predicted_targets = NULL,
+    accuracy = NULL,
     coefficients = NULL,
     levels_map = NULL,
     class_labels = NULL,
@@ -74,6 +77,10 @@ LogisticRegression <- R6Class("LogisticRegression",
       if (!(target %in% colnames(data))) {
         stop(paste("[Warning] You cannot remove the target column."))
       }
+
+      # Calcul du nombre de valeurs manquantes et du pourcentage
+      self$missing_values <- sum(is.na(data))
+      self$missing_values_percent <- self$missing_values / (nrow(data) * ncol(data)) * 100
       
       self$data <- data
       self$target <- target
@@ -81,35 +88,44 @@ LogisticRegression <- R6Class("LogisticRegression",
     },
 
     # Fonction de gestion des valeurs manquantes
-    handle_missing_values = function(method = c("mean", "median", "mode", "remove")) {
-      method <- match.arg(method)
+    handle_missing_values = function(num_method = c("none", "mean", "median", "mode", "remove"), cat_method = c("none", "mode", "remove")) {
+      num_method <- match.arg(num_method)
+      cat_method <- match.arg(cat_method)
       data <- self$data
       
       for (var in colnames(data)) {
         if (any(is.na(data[[var]]))) {
           # Gestion des valeurs manquantes pour les variables numériques
           if (is.numeric(data[[var]])) {
-            if (method == "mean") {
+            if (num_method == "none") {
+              next
+            } else if (num_method == "mean") {
               data[[var]][is.na(data[[var]])] <- mean(data[[var]], na.rm = TRUE)
-            } else if (method == "median") {
+            } else if (num_method == "median") {
               data[[var]][is.na(data[[var]])] <- median(data[[var]], na.rm = TRUE)
-            } else if (method == "mode") {
+            } else if (num_method == "mode") {
               mode_value <- as.numeric(names(sort(table(data[[var]]), decreasing = TRUE)[1]))
               data[[var]][is.na(data[[var]])] <- mode_value
-            } else if (method == "remove") {
+            } else if (num_method == "remove") {
               data <- data[complete.cases(data), ]
             }
           # Gestion des valeurs manquantes pour les variables catégorielles
           } else if (is.factor(data[[var]]) || is.character(data[[var]])) {
-            if (method == "mode") {
+            if (cat_method == "none") {
+              next
+            } else if (cat_method == "mode") {
               mode_value <- names(sort(table(data[[var]]), decreasing = TRUE))[1]
               data[[var]][is.na(data[[var]])] <- mode_value
-            } else if (method == "remove") {
+            } else if (cat_method == "remove") {
               data <- data[!is.na(data[[var]]), ]
             }
           }
         }
       }
+      
+      # Calcul du nombre de valeurs manquantes et du pourcentage
+      self$missing_values <- sum(is.na(data))
+      self$missing_values_percent <- self$missing_values / (nrow(data) * ncol(data)) * 100
       
       self$data <- data
     },
