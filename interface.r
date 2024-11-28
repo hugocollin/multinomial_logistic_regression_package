@@ -99,6 +99,22 @@ ui <- fluidPage(
             min = 1,
             step = 1
           )),
+          p("Batch size"),
+          disabled(numericInput(
+            "batch_size",
+            label = NULL,
+            value = 50,
+            min = 1,
+            step = 1
+          )),
+          p("Tolerance"),
+          disabled(numericInput(
+            "tol",
+            label = NULL,
+            value = 1e-5,
+            min = 1e-10,
+            step = 1e-5
+          )),
           disabled(actionButton("fit_model", "Fit the model", width = "100%")),
           p(tags$b("Step 3 : Predict classes"), style = "text-align: center;"),
           disabled(actionButton("predict", "Predict classes", width = "100%"))
@@ -132,6 +148,8 @@ server <- function(input, output, session) {
     disable("prepare_data")
     disable("learning_rate")
     disable("max_iter")
+    disable("batch_size")
+    disable("tol")
     disable("fit_model")
     disable("predict")
     output$missing_info <- renderText(NULL)
@@ -182,6 +200,8 @@ server <- function(input, output, session) {
       disable("prepare_data")
       disable("learning_rate")
       disable("max_iter")
+      disable("batch_size")
+      disable("tol")
       disable("fit_model")
       disable("predict")
       rv$model <- NULL
@@ -199,6 +219,8 @@ server <- function(input, output, session) {
     disable("prepare_data")
     disable("learning_rate")
     disable("max_iter")
+    disable("batch_size")
+    disable("tol")
     disable("fit_model")
     disable("predict")
     rv$predictions <- NULL
@@ -249,6 +271,8 @@ server <- function(input, output, session) {
       disable("prepare_data")
       disable("learning_rate")
       disable("max_iter")
+      disable("batch_size")
+      disable("tol")
       disable("fit_model")
       disable("predict")
     })
@@ -259,6 +283,8 @@ server <- function(input, output, session) {
     # Réinitialisation de l'interface
     disable("learning_rate")
     disable("max_iter")
+    disable("batch_size")
+    disable("tol")
     disable("fit_model")
     disable("predict")
 
@@ -298,6 +324,8 @@ server <- function(input, output, session) {
     # Réinitialisation de l'interface
     disable("learning_rate")
     disable("max_iter")
+    disable("batch_size")
+    disable("tol")
     disable("fit_model")
     disable("predict")
     rv$predictions <- NULL
@@ -316,6 +344,8 @@ server <- function(input, output, session) {
       # Activation de l'interface
       enable("learning_rate")
       enable("max_iter")
+      enable("batch_size")
+      enable("tol")
       enable("fit_model")
     }, error = function(e) {
       output$output <- renderText(paste("[ERROR]", e$message))
@@ -323,6 +353,8 @@ server <- function(input, output, session) {
       # Désactivation de l'interface
       disable("learning_rate")
       disable("max_iter")
+      disable("batch_size")
+      disable("tol")
       disable("fit_model")
       disable("predict")
       rv$predictions <- NULL
@@ -338,9 +370,11 @@ server <- function(input, output, session) {
     # Récupération des paramètres du modèle
     learning_rate <- input$learning_rate
     max_iter <- input$max_iter
+    batch_size <- input$batch_size
+    tol <- input$tol
 
     # Vérification des paramètres du modèle
-    req(learning_rate, max_iter)
+    req(learning_rate, max_iter, batch_size, tol)
 
     # Validation des entrées
     if (is.null(learning_rate) || learning_rate <= 0) {
@@ -353,9 +387,19 @@ server <- function(input, output, session) {
       return(NULL)
     }
 
+    if (is.null(batch_size) || batch_size < 1) {
+      output$output <- renderText("[Warning] The batch size must be a positive integer.")
+      return(NULL)
+    }
+    
+    if (is.null(tol) || tol <= 0) {
+      output$output <- renderText("[Warning] The tolerance must be a positive number.")
+      return(NULL)
+    }
+
     # Ajustement du modèle avec les paramètres fournis
     tryCatch({
-      rv$model$fit(learning_rate = learning_rate, max_iter = max_iter)
+      rv$model$fit(learning_rate = learning_rate, max_iter = max_iter, batch_size = batch_size, tol = tol)
       output$output <- renderText("[INFO] The model has been successfully fitted.")
       
       # Activation du bouton prédiction

@@ -193,16 +193,20 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$y_test <- y_test
     },
     
-    
-    fit = function(learning_rate = 0.001, max_iter = 1000, batch_size = 68, tol = 1e-6) {
+    # Fonction fit : Ajustement du modèle
+    fit = function(learning_rate, max_iter, batch_size, tol) {
       y <- self$y_train
       X <- self$X_train
+
+      # Initialisation des attributs du modèle
+      self$class_labels <- self$levels_map[[self$target]]
+      self$class_frequencies <- table(y) / length(y)
       
       # Ajout de l'intercept
-      X <- cbind(1, as.matrix(X))  # Dimensions : (n_samples, n_features + 1)
+      X <- cbind(1, as.matrix(X))
       
       # Initialisation des coefficients
-      num_classes <- length(unique(y))  # Nombre de classes
+      num_classes <- length(unique(y))
       coefficients <- matrix(rnorm(ncol(X) * num_classes, mean = 0, sd = 0.01), 
                              nrow = ncol(X), ncol = num_classes)
       epsilon <- 1e-15
@@ -210,7 +214,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Encodage en one-hot
       y_one_hot <- matrix(0, nrow = length(y), ncol = num_classes)
       for (i in 1:length(y)) {
-        y_one_hot[i, y[i] + 1] <- 1  # Assurez-vous que les classes commencent à 0
+        y_one_hot[i, y[i] + 1] <- 1
       }
       
       # Variables de convergence
@@ -222,23 +226,23 @@ LogisticRegression <- R6Class("LogisticRegression",
           batch_end <- min(batch_start + batch_size - 1, nrow(X))
           batch_indices <- indices[batch_start:batch_end]
           
-          X_batch <- X[batch_indices, , drop = FALSE]  # Dimensions : (batch_size, n_features + 1)
-          y_batch <- y_one_hot[batch_indices, ]  # Dimensions : (batch_size, num_classes)
+          X_batch <- X[batch_indices, , drop = FALSE]
+          y_batch <- y_one_hot[batch_indices, ]
           
           # Calcul des scores et softmax
-          scores <- X_batch %*% coefficients  # Dimensions : (batch_size, num_classes)
+          scores <- X_batch %*% coefficients
           softmax_probs <- exp(scores - apply(scores, 1, max))
           softmax_probs <- softmax_probs / rowSums(softmax_probs)
           
           # Calcul du gradient
-          gradient <- t(X_batch) %*% (softmax_probs - y_batch) / nrow(X_batch)  # Dimensions : (n_features + 1, num_classes)
+          gradient <- t(X_batch) %*% (softmax_probs - y_batch) / nrow(X_batch)
           
           # Mise à jour des coefficients
           coefficients <- coefficients - learning_rate * gradient
         }
         
         # Log-vraisemblance
-        scores <- X %*% coefficients  # Dimensions : (n_samples, num_classes)
+        scores <- X %*% coefficients
         softmax_probs <- exp(scores - apply(scores, 1, max))
         softmax_probs <- softmax_probs / rowSums(softmax_probs)
         log_likelihood <- sum(y_one_hot * log(pmax(softmax_probs, epsilon)))
@@ -263,61 +267,35 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$coefficients <- coefficients
     },
     
-    
-    
     # Fonction predict : Prédiction des classes
     predict = function() {
-      # Vérification des données de test
-      if (is.null(self$X_test) || is.null(self$coefficients)) {
-        stop("Les données de test ou les coefficients ne sont pas disponibles.")
-      }
-      
       # Récupération des données de test
       X <- self$X_test
       
       # Ajout de l'intercept
       X <- cbind(1, as.matrix(X))
       
-      # Vérification des dimensions
-      if (ncol(X) != nrow(self$coefficients)) {
-        stop("Les dimensions de X et des coefficients ne correspondent pas.")
-      }
-      
       # Prédiction des scores pour chaque classe
-      scores <- X %*% self$coefficients  # Matrice de scores pour chaque classe
+      scores <- X %*% self$coefficients
       
       # Application de Softmax pour obtenir les probabilités
-      exp_scores <- exp(scores - apply(scores, 1, max))  # Stabilisation numérique
-      softmax_probs <- exp_scores / rowSums(exp_scores)  # Normalisation Softmax
+      exp_scores <- exp(scores - apply(scores, 1, max))
+      softmax_probs <- exp_scores / rowSums(exp_scores)
       
       # Prédiction des classes (classe ayant la probabilité maximale)
-      predicted_classes <- apply(softmax_probs, 1, which.max) - 1  # Décalage pour correspondre à l'index 0
+      predicted_classes <- apply(softmax_probs, 1, which.max) - 1
       
-      # Mapping aux labels originaux (si fourni)
-      if (!is.null(self$class_labels)) {
-        self$predicted_targets <- self$class_labels[predicted_classes + 1]  # Ajuster pour correspondre aux labels
-      } else {
-        self$predicted_targets <- predicted_classes  # Sans mapping
-      }
-      
-      # Affichage des probabilités pour les premières 10 prédictions
-      cat("Premières 10 probabilités de prédiction :\n")
-      print(head(softmax_probs, 10))
+      # Conversion des classes prédites en labels
+      self$predicted_targets <- data.frame(
+        Predicted = self$class_labels[predicted_classes + 1],
+        stringsAsFactors = FALSE
+      )
       
       # Calcul de la précision
-      if (!is.null(self$y_test)) {
-        accuracy <- mean(predicted_classes == self$y_test)
-        cat("Précision : ", accuracy, "\n")
-      } else {
-        accuracy <- NA
-        cat("Aucune donnée d'évaluation fournie pour calculer la précision.\n")
-      }
+      self.accuracy <- mean(predicted_classes == self$y_test)
       
-      # Retourner les résultats
-      return(accuracy)
+      return(self.accuracy)
     }
-    
-    
     
     # # Méthode predict_proba : Prédiction des probabilités
     # predict_proba = function(X) {
