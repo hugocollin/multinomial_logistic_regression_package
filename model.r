@@ -41,20 +41,21 @@ LogisticRegression <- R6Class("LogisticRegression",
         lines <- read_lines(file_path)
         lines <- trimws(lines)
         lines <- lines[nchar(lines) > 0]
+        lines <- ifelse(grepl(paste0(delimiter, "$"), lines), paste0(lines, NaN), lines)
         split_lines <- strsplit(lines, delimiter, fixed = TRUE)
         num_cols <- length(split_lines[[1]])
-        inconsistant_rows <- which(sapply(split_lines, length) != num_cols)
-
         if (num_cols < 2) {
           stop(paste("[Warning] Failed to load the CSV file with the delimiter '", delimiter, "'.", sep = ""))
         }
-        
+        count_columns <- function(line) {
+          return(length(line))
+        }
+        num_cols_per_line <- sapply(split_lines, count_columns)
+        inconsistant_rows <- which(num_cols_per_line != num_cols)
         if (length(inconsistant_rows) > 0) {
-          problematic_lines <- lines[inconsistant_rows]
-          final_text <- ifelse(length(inconsistant_rows) == 1, "à la ligne", "aux lignes")
-          stop(paste0("[Warning] Discrepancy detected in the number of columns in the CSV file.",
-                      final_text, " : ",
-                      paste(inconsistant_rows, collapse = ", "), "."))
+          problematic_lines <- inconsistant_rows
+          stop(paste0("[Warning] Discrepancy detected in the number of columns in the CSV file at lines : ",
+                      paste(problematic_lines, collapse = ", "), "."))
         }
       
       # Chargement d'un fichier Excel
@@ -212,10 +213,8 @@ LogisticRegression <- R6Class("LogisticRegression",
       epsilon <- 1e-15
       
       # Encodage en one-hot
-      y_one_hot <- matrix(0, nrow = length(y), ncol = num_classes)
-      for (i in 1:length(y)) {
-        y_one_hot[i, y[i] + 1] <- 1
-      }
+      y_factor <- as.factor(y)
+      y_one_hot <- model.matrix(~ y_factor - 1)
       
       # Variables de convergence
       prev_log_likelihood <- -Inf
