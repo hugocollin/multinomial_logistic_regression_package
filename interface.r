@@ -42,7 +42,7 @@ ui <- fluidPage(
           disabled(selectInput(
             "delimiter",
             label = NULL,
-            choices = c(",", ";", ":", "-", "|", "/"),
+            choices = c("Comma (,)" = ",", "Semicolon (;)" = ";", "Colon (:)" = ":", "Hyphen (-)" = "-", "Pipe (|)" = "|", "Slash (/)" = "/", "Tab (\\t)" = "\t"),
             selected = ","
           )),
           p("Target variable (required)"),
@@ -177,25 +177,29 @@ server <- function(input, output, session) {
       incProgress(0.2, detail = "File reading in progress...")
 
       if (grepl("\\.csv$", input$file$name, ignore.case = TRUE)) {
-        df <- read.csv(input$file$datapath, sep = input$delimiter, stringsAsFactors = FALSE)
+        print(input$delimiter)
+        df <- read_delim(input$file$datapath, delim = input$delimiter)
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
       } else if (grepl("\\.xlsx$", input$file$name, ignore.case = TRUE)) {
         df <- read_excel(input$file$datapath)
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
       } else {
         df <- NULL
-        output$output <- renderText("[Warning] Please upload a CSV or Excel file.")
+        output$output <- renderText("[WARNING] Please upload a CSV or Excel file.")
       }
+
+      # Récupération des colonnes catégorielles
+      cat_cols <- colnames(df)[sapply(df, is.character)]
       
-      if (!is.null(df)) {
+      if ((!is.null(df)) && (length(cat_cols) > 0)) {
         incProgress(0.2, detail = "Retrieving column names in progress...")
-        noms_colonnes <- names(df)
         
         # Mise à jour de la sélection de la variable cible
-        updateSelectInput(session, "target", choices = noms_colonnes)
+        updateSelectInput(session, "target", choices = cat_cols)
         
         # Mise à jour de la sélection des colonnes à supprimer
-        updateSelectInput(session, "remove_cols", choices = noms_colonnes, selected = NULL)
+        cols_names <- names(df)
+        updateSelectInput(session, "remove_cols", choices = cols_names, selected = NULL)
 
         # Activation de l'interface
         if (grepl("\\.csv$", input$file$name, ignore.case = TRUE)) {
@@ -227,6 +231,12 @@ server <- function(input, output, session) {
         rv$predictions <- NULL
 
         incProgress(1, detail = "Error")
+
+        if (is.null(df)) {
+          output$output <- renderText("[WARNING] The file could not be read.")
+        } else if (length(cat_cols) == 0) {
+          output$output <- renderText("[WARNING] No quantitative column available for the target variable.")
+        }
       }
     })
   })
@@ -452,22 +462,22 @@ server <- function(input, output, session) {
       # Validation des paramètres
       incProgress(0.1, detail = "Model parameters validation in progress...")
       if (is.null(learning_rate) || learning_rate <= 0) {
-        output$output <- renderText("[Warning] The learning rate must be a positive number.")
+        output$output <- renderText("[WARNING] The learning rate must be a positive number.")
         return(NULL)
       }
       
       if (is.null(max_iter) || max_iter < 1) {
-        output$output <- renderText("[Warning] The maximum number of iterations must be a positive integer.")
+        output$output <- renderText("[WARNING] The maximum number of iterations must be a positive integer.")
         return(NULL)
       }
 
       if (is.null(batch_size) || batch_size < 1) {
-        output$output <- renderText("[Warning] The batch size must be a positive integer.")
+        output$output <- renderText("[WARNING] The batch size must be a positive integer.")
         return(NULL)
       }
       
       if (is.null(tol) || tol <= 0) {
-        output$output <- renderText("[Warning] The tolerance must be a positive number.")
+        output$output <- renderText("[WARNING] The tolerance must be a positive number.")
         return(NULL)
       }
 
