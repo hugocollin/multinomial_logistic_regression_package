@@ -1,5 +1,5 @@
 # Liste des packages requis
-packages <- c("R6", "readr", "readxl", "DT", "shiny", "shinythemes", "shinyjs")
+packages <- c("R6", "DT", "shiny", "shinythemes", "shinyjs", "readr", "readxl", "stringr")
 
 # Installer les packages manquants
 installed_packages <- packages %in% rownames(installed.packages())
@@ -16,9 +16,29 @@ library(shiny)
 library(shinythemes)
 library(shinyjs)
 library(readxl)
+library(stringr)
 
 # Définition de la taille maximale des fichiers à 1Go
 options(shiny.maxRequestSize = 1 * 1024^3)
+
+# Fonction de détection automatique du délimiteur
+detect_delimiter <- function(file_path, n_max = 5) {
+  lines <- read_lines(file_path, n_max = n_max)
+  delimiters <- c(",", ";", ":", "-", "|", "/", "\t")
+  
+  # Comptage des séparateurs dans les lignes
+  delimiter_counts <- sapply(delimiters, function(delim) {
+    sum(sapply(lines, function(line) {
+      num_sep <- str_count(line, fixed(delim))
+      return(num_sep)
+    }))
+  })
+  
+  # Détection du séparateur le plus fréquent
+  detected_delimiter <- delimiters[[which.max(delimiter_counts)]]
+  
+  return(detected_delimiter)
+}
 
 # Interface utilisateur
 ui <- fluidPage(
@@ -38,6 +58,7 @@ ui <- fluidPage(
           p("Choose a CSV or Excel file (max 1Go)"),
           fileInput("file", label = NULL,
                     accept = c(".csv", ".xlsx")),
+          disabled(checkboxInput("auto_delimiter", "Automatic delimiter", value = TRUE)),
           p("Delimiter (required only for CSV files)"),
           disabled(selectInput(
             "delimiter",
@@ -147,8 +168,9 @@ server <- function(input, output, session) {
   observe({
     withProgress(message = 'File import > ', value = 0, {
       # Réinitialisation de l'interface
-      incProgress(0.2, detail = "Interface updating in progress...")
+      incProgress(0.1, detail = "Interface updating in progress...")
 
+      disable("auto_delimiter")
       disable("delimiter")
       disable("target")
       disable("remove_cols")
@@ -169,18 +191,33 @@ server <- function(input, output, session) {
       rv$predictions <- NULL
 
       # Vérification de l'existence du fichier
-      incProgress(0.2, detail = "File verification in progress...")
+      incProgress(0.1, detail = "File verification in progress...")
 
       req(input$file)
-      
-      # Lecture du fichier en fonction de l'extension
-      incProgress(0.2, detail = "File reading in progress...")
 
+      # Lecture du fichier en fonction de l'extension
       if (grepl("\\.csv$", input$file$name, ignore.case = TRUE)) {
-        print(input$delimiter)
-        df <- read_delim(input$file$datapath, delim = input$delimiter)
+        # Détection automatique du délimiteur
+        if (!input$auto_delimiter) {
+          enable("delimiter")
+          delimiter <- input$delimiter
+        } else {
+          disable("delimiter")
+
+          # Détection du délimiteur
+          delimiter <- detect_delimiter(input$file$datapath)
+
+          incProgress(0.1, detail = "Delimiter detection in progress...")
+
+          # Sélection automatique du délimiteur
+          updateSelectInput(session, "delimiter", selected = delimiter)
+        }
+
+        incProgress(0.2, detail = "File reading in progress...")
+        df <- read_delim(input$file$datapath, delim = delimiter)
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
       } else if (grepl("\\.xlsx$", input$file$name, ignore.case = TRUE)) {
+        incProgress(0.2, detail = "File reading in progress...")
         df <- read_excel(input$file$datapath)
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
       } else {
@@ -203,7 +240,7 @@ server <- function(input, output, session) {
 
         # Activation de l'interface
         if (grepl("\\.csv$", input$file$name, ignore.case = TRUE)) {
-          enable("delimiter")
+          enable("auto_delimiter")
         }
         enable("target")
         enable("remove_cols")
@@ -212,6 +249,7 @@ server <- function(input, output, session) {
         incProgress(1, detail = "Success")
       } else {
         # Désactivation de l'interface
+        disable("auto_delimiter")
         disable("delimiter")
         disable("target")
         disable("remove_cols")
