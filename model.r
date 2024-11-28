@@ -296,11 +296,68 @@ LogisticRegression <- R6Class("LogisticRegression",
       return(self.accuracy)
     }
     
-    # # Méthode predict_proba : Prédiction des probabilités
-    # predict_proba = function(X) {
-    #   X <- cbind(1, as.matrix(X))  # Ajout de l'intercept
-    #   probs <- 1 / (1 + exp(-X %*% self$coefficients))
-    #   return(data.frame(Class1 = 1 - probs, Class2 = probs))
-    # }
+    # Méthode predict_proba : Prédiction des probabilités
+    predict_proba = function() {
+      
+      X_input <- self$X_test
+     
+      # Ajout de l'intercept
+      X_input <- cbind(1, as.matrix(X_input))
+      
+      # Calcul des scores (logits)
+      scores <- X_input %*% self$coefficients
+      
+      # Application du softmax
+      exp_scores <- exp(scores - apply(scores, 1, max))  # Eviter overflow numérique
+      softmax_probs <- exp_scores / rowSums(exp_scores)
+      
+      # Retourner les probabilités pour chaque classe
+      return(softmax_probs)
+    },
+    
+    
+    summary = function() {
+      cat("Logistic Regression Multinomial Model - Summary\n")
+      cat("---------------------------------------------------\n")
+      cat("Number of Observations (Training): ", nrow(self$X_train), "\n")
+      cat("Number of Observations (Testing): ", nrow(self$X_test), "\n")
+      cat("Number of Predictors: ", ncol(self$X_train), "\n")
+      cat("Number of Classes: ", length(self$class_labels), "\n")
+      cat("Class Labels: ", paste(self$class_labels, collapse = ", "), "\n")
+      cat("Class Frequencies (Training):\n")
+      print(self$class_frequencies)
+      cat("\n")
+      
+      if (!is.null(self$coefficients)) {
+        cat("Coefficients (first 5):\n")
+        print(head(self$coefficients, 5))
+        cat("\n")
+      } else {
+        cat("Model not yet fitted. Coefficients not available.\n")
+      }
+      
+      if (!is.null(self$predicted_targets)) {
+        # Calculer l'accuracy sur les données de test si les prédictions existent
+        accuracy <- mean(self$predicted_targets == self$y_test)
+        cat("Accuracy on Test Data: ", accuracy, "\n")
+      }
+    },
+    
+    
+    print = function() {
+      cat("Logistic Regression Multinomial Model\n")
+      cat("Number of Classes: ", length(self$class_labels), "\n")
+      cat("Number of Predictors: ", ncol(self$X_train), "\n")
+      cat("Class Labels: ", paste(self$class_labels, collapse = ", "), "\n")
+      
+      if (!is.null(self$coefficients)) {
+        cat("Coefficients (first 5): \n")
+        print(head(self$coefficients, 5))  # Afficher les 5 premiers coefficients
+      } else {
+        cat("Model not yet fitted.\n")
+      }
+    }
+    
+    
   )
 )
