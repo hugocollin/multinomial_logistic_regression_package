@@ -18,7 +18,7 @@ This package is a simple implementation of the Multinomial Logistic Regression a
 To install the package on your local machine, you can use the following command :
 
 ```R
-devtools::install_githug("hugocollin/multinomial_logistic_regression_package")
+devtools::install_github("hugocollin/multinomial_logistic_regression_package")
 ```
 
 _Before installing the package, make sure you have the following dependencies installed :_
@@ -29,8 +29,8 @@ _Before installing the package, make sure you have the following dependencies in
 _You can install them using the following commands :_
 
 ```R
-install.package("devtools")
-install.package("rtools")
+install.packages("devtools")
+install.packages("rtools")
 ```
 ## Installation of the UI package
 
