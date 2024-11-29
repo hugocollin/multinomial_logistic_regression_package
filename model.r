@@ -211,6 +211,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     # Fonction de préparation des données
     prepare_data = function(target, columns_to_remove, test_size) {
       data <- self$data
+      self$target <- target
 
       # Définition des colonnes de prédiction,
       self$predictors <- setdiff(colnames(data), c(target, columns_to_remove))
@@ -406,7 +407,6 @@ LogisticRegression <- R6Class("LogisticRegression",
       return(softmax_probs)
     },
     
-    
     summary = function() {
       cat("Logistic Regression Multinomial Model - Summary\n")
       cat("---------------------------------------------------\n")
@@ -433,7 +433,6 @@ LogisticRegression <- R6Class("LogisticRegression",
         cat("Accuracy on Test Data: ", accuracy, "\n")
       }
     },
-    
     
     print = function() {
       cat("Logistic Regression Multinomial Model\n")

@@ -180,6 +180,7 @@ server <- function(input, output, session) {
       disable("handle_missing_cat_method")
       disable("handle_missing")
       disable("auto_target")
+      updateCheckboxInput(session, "auto_target", value = TRUE)
       disable("target")
       disable("auto_delete_cols")
       updateCheckboxInput(session, "auto_delete_cols", value = FALSE)
@@ -341,6 +342,7 @@ server <- function(input, output, session) {
         enable("handle_missing")
         enable("auto_target")
         enable("auto_delete_cols")
+        enable("remove_cols")
         enable("test_size")
         enable("prepare_data")
         
