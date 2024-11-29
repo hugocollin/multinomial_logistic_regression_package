@@ -1,0 +1,9 @@
+Package: mlr
+Version: 0.1.0
+Title: Multinomial Logistic Regression Model
+Author: COLLIN Hugo & KPAMEGAN Falonne
+Maintainer: Lyon 2 SISE <m2sise@univ-lyon2.fr>
+Description: This package implements a multinomial logistic regression.
+License: GPL-3
+Encoding: UTF-8
+RoxygenNote: 7.3.2

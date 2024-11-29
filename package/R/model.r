@@ -2,31 +2,108 @@
 library(R6)
 library(readr)
 library(readxl)
+library(roxygen2)
+
+#' LogisticRegression Class
+#'
+#' Implements a multinomial logistic regression model using R6.
+#' 
+#' @section Methods:
+#' \describe{
+#'   \item{\code{initialize(file_path, delimiter)}}{Initializes the model with data from a CSV or Excel file.}
+#'   \item{\code{handle_missing_values(num_method, cat_method)}}{Handles missing values in the dataset.}
+#'   \item{\code{auto_select_target(entropy_threshold, correlation_threshold, weight_entropy, weight_correlation)}}{Automatically selects the target variable based on entropy and correlation thresholds.}
+#'   \item{\code{auto_remove_columns(correlation_threshold)}}{Automatically removes columns with high correlation.}
+#'   \item{\code{prepare_data(target, columns_to_remove, test_size)}}{Prepares the data for training by defining predictors and splitting into training and testing sets.}
+#'   \item{\code{fit(learning_rate, max_iter, batch_size, tol)}}{Fits the logistic regression model using gradient descent.}
+#'   \item{\code{predict()}}{Predicts classes for the test set and returns accuracy.}
+#'   \item{\code{predict_proba()}}{Predicts class probabilities for the test set.}
+#'   \item{\code{summary()}}{Prints a summary of the model.}
+#'   \item{\code{print()}}{Prints basic information about the model.}
+#' }
+#'
+#' @docType class
+#' @import R6 readr readxl
 
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
   public = list(
+    #' @field data Data frame containing the raw data loaded from the specified file.
     data = NULL,
+    
+    #' @field missing_values List or vector indicating missing values in each column.
     missing_values = NULL,
+    
+    #' @field missing_values_percent Percentage of missing values per column.
     missing_values_percent = NULL,
+    
+    #' @field cols_names Character vector containing the names of all columns in the dataset.
     cols_names = NULL,
+    
+    #' @field cat_cols_names Character vector containing the names of categorical columns.
     cat_cols_names = NULL,
+    
+    #' @field target Character indicating the name of the target variable for regression.
     target = NULL,
+    
+    #' @field predictors Character vector containing the names of predictor variables used for the model.
     predictors = NULL,
+    
+    #' @field prepared_data List containing the processed data after preparation (encoding, normalization, etc.).
     prepared_data = NULL,
+    
+    #' @field X Matrix of predictor variables used for model training.
     X = NULL,
+    
+    #' @field y Vector of target variable labels corresponding to the observations.
     y = NULL,
+    
+    #' @field n Total number of observations in the dataset.
     n = NULL,
+    
+    #' @field X_train Matrix of predictor variables for the training set.
     X_train = NULL,
+    
+    #' @field y_train Vector of target variable labels for the training set.
     y_train = NULL,
+    
+    #' @field X_test Matrix of predictor variables for the test set.
     X_test = NULL,
+    
+    #' @field y_test Vector of target variable labels for the test set.
     y_test = NULL,
+    
+    #' @field predicted_targets Data frame containing the classes predicted by the model on the test set.
     predicted_targets = NULL,
+    
+    #' @field accuracy Numeric value indicating the accuracy of the model on the test set.
     accuracy = NULL,
+    
+    #' @field coefficients Vector or matrix containing the coefficients of the logistic regression model.
     coefficients = NULL,
+    
+    #' @field levels_map List or vector mapping the levels of the encoded categorical variables.
     levels_map = NULL,
+    
+    #' @field class_labels Character vector containing the labels of the different classes.
     class_labels = NULL,
+    
+    #' @field class_frequencies Vector or table indicating the frequency of each class in the training data.
     class_frequencies = NULL,
+
+    #' Initialize Logistic Regression Model
+    #'
+    #' Initializes the \code{LogisticRegression} class by loading data from a specified file.
+    #'
+    #' @param file_path Character. The path to the data file (CSV or Excel).
+    #' @param delimiter Character. The delimiter used in the CSV file (e.g., "," for comma).
+    #'
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Initialize the model with a CSV file and comma delimiter
+    #' model <- LogisticRegression$new("data/loan_data.csv", ",")
+    #' }
 
     # Constructeur de la classe
     initialize = function(file_path, delimiter) {
@@ -79,6 +156,32 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$levels_map <- list()
     },
 
+    #' Handle Missing Values in the Dataset
+    #'
+    #' Processes missing values in the dataset using specified methods for numerical and categorical variables.
+    #'
+    #' @param num_method Character. Method to handle missing numerical values. Options are:
+    #'   \itemize{
+    #'     \item \code{"none"}: Do not handle missing values.
+    #'     \item \code{"mean"}: Replace missing values with the mean of the column.
+    #'     \item \code{"median"}: Replace missing values with the median of the column.
+    #'     \item \code{"mode"}: Replace missing values with the mode of the column.
+    #'     \item \code{"remove"}: Remove rows with missing numerical values.
+    #'   }
+    #' @param cat_method Character. Method to handle missing categorical values. Options are:
+    #'   \itemize{
+    #'     \item \code{"none"}: Do not handle missing values.
+    #'     \item \code{"mode"}: Replace missing values with the mode of the column.
+    #'     \item \code{"remove"}: Remove rows with missing categorical values.
+    #'   }
+    #'
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Handle missing values by replacing numerical NAs with mean and categorical NAs with mode
+    #' model$handle_missing_values(num_method = "mean", cat_method = "mode")
+    #' }
+
     # Fonction de gestion des valeurs manquantes
     handle_missing_values = function(num_method = c("none", "mean", "median", "mode", "remove"), cat_method = c("none", "mode", "remove")) {
       num_method <- match.arg(num_method)
@@ -121,6 +224,24 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       self$data <- data
     },
+
+    #' Automatically Select Target Variable
+    #'
+    #' Automatically selects the target variable based on entropy and correlation thresholds.
+    #'
+    #' @param entropy_threshold Numeric. Threshold for entropy to consider a variable as a potential target.
+    #' @param correlation_threshold Numeric. Threshold for correlation to filter out highly correlated variables.
+    #' @param weight_entropy Numeric. Weight assigned to entropy in the selection criteria.
+    #' @param weight_correlation Numeric. Weight assigned to correlation in the selection criteria.
+    #'
+    #' @return returns the name of the selected target variable.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Automatically select target with specified thresholds
+    #' model$auto_select_target(entropy_threshold = 0.5, correlation_threshold = 0.3, 
+    #'                         weight_entropy = 0.7, weight_correlation = 0.3)
+    #' }
 
     # Fonction de sélection automatique de la variable cible
     auto_select_target = function(entropy_threshold = 0.5, correlation_threshold = 0.5, weight_entropy = 0.5, weight_correlation = 0.5) {
@@ -178,6 +299,20 @@ LogisticRegression <- R6Class("LogisticRegression",
       return(best_target)
     },
 
+    #' Automatically remove unnecessary columns
+    #'
+    #' Automatically removes columns with high correlation based on the specified threshold.
+    #'
+    #' @param correlation_threshold Numeric. Threshold for average Cramér's V correlation to consider a column for removal (default is 0.9).
+    #'
+    #' @return A character vector of column names to remove or \code{NULL} if no columns meet the criteria.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Remove columns with average correlation above 0.9
+    #' columns_removed <- model$auto_remove_columns(correlation_threshold = 0.9)
+    #' }
+
     # Fonction de suppression automatique des colonnes inutiles
     auto_remove_columns = function(correlation_threshold = 0.9) {
       data <- self$data
@@ -207,6 +342,21 @@ LogisticRegression <- R6Class("LogisticRegression",
         return(columns_to_remove)
       }
     },
+
+    #' Prepare Data for Modeling
+    #'
+    #' Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+    #'
+    #' @param target Character. The name of the target variable.
+    #' @param columns_to_remove Character vector. Names of columns to remove from the predictors.
+    #' @param test_size Numeric. Proportion of the dataset to include in the test split (e.g., 0.3 for 30%).
+    #'
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Prepare the data with a specified target, columns to remove, and test size
+    #' model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+    #' }
     
     # Fonction de préparation des données
     prepare_data = function(target, columns_to_remove, test_size) {
@@ -285,6 +435,24 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$X_test <- X_test
       self$y_test <- y_test
     },
+
+    #' Fit the Logistic Regression Model
+    #'
+    #' Adjusts the model coefficients using gradient descent.
+    #'
+    #' @param learning_rate Numeric. The learning rate for gradient descent.
+    #' @param max_iter Integer. The maximum number of iterations.
+    #' @param batch_size Integer. The size of each mini-batch.
+    #' @param tol Numeric. The tolerance for convergence.
+    #'
+    #' @return Invisibly returns the fitted coefficients.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' model <- LogisticRegression$new("data/loan_data.csv", ",")
+    #' model$prepare_data(target = "default", columns_to_remove = NULL, test_size = 0.2)
+    #' model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 32, tol = 1e-4)
+    #' }
     
     # Fonction fit : Ajustement du modèle
     fit = function(learning_rate, max_iter, batch_size, tol) {
@@ -357,6 +525,22 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       self$coefficients <- coefficients
     },
+
+    #' Prepare Data for Modeling
+    #'
+    #' Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+    #'
+    #' @param target Character. The name of the target variable.
+    #' @param columns_to_remove Character vector. Names of columns to remove from the predictors.
+    #' @param test_size Numeric. Proportion of the dataset to include in the test split (e.g., 0.2 for 20%).
+    #'
+    #' @return returns a list containing the prepared data, predictors, and training/testing splits.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Prepare the data with a specified target, columns to remove, and test size
+    #' model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+    #' }
     
     # Fonction predict : Prédiction des classes
     predict = function() {
@@ -383,6 +567,22 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       return(self.accuracy)
     },
+
+    #' Prepare Data for Modeling
+    #'
+    #' Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+    #'
+    #' @param target Character. The name of the target variable.
+    #' @param columns_to_remove Character vector. Names of columns to remove from the predictors.
+    #' @param test_size Numeric. Proportion of the dataset to include in the test split (e.g., 0.2 for 20%).
+    #'
+    #' @return returns a list containing the prepared data, predictors, and training/testing splits.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Prepare the data with a specified target, columns to remove, and test size
+    #' model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+    #' }
     
     predictions_to_labels = function() {
 
@@ -507,12 +707,24 @@ LogisticRegression <- R6Class("LogisticRegression",
       scores <- X_input %*% self$coefficients
       
       # Application du softmax
-      exp_scores <- exp(scores - apply(scores, 1, max))  # Eviter overflow numérique
+      exp_scores <- exp(scores - apply(scores, 1, max))
       softmax_probs <- exp_scores / rowSums(exp_scores)
       
       # Retourner les probabilités pour chaque classe
       return(softmax_probs)
     },
+
+    #' Summary of the Logistic Regression Model
+    #'
+    #' Prints a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.
+    #'
+    #' @return None. Prints the summary to the console.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Print the model summary
+    #' model$summary()
+    #' }
     
     summary = function() {
       cat("Logistic Regression Multinomial Model - Summary\n")
@@ -540,6 +752,18 @@ LogisticRegression <- R6Class("LogisticRegression",
         cat("Accuracy on Test Data: ", accuracy, "\n")
       }
     },
+
+    #' Print basics informations about the Logistic Regression Model
+    #'
+    #' Prints basic information about the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.
+    #'
+    #' @return None. The method prints information to the console.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Print the model information
+    #' model$print()
+    #' }
     
     print = function() {
       cat("Logistic Regression Multinomial Model\n")

@@ -1,14 +1,14 @@
 # Liste des packages requis
-packages <- c("R6", "DT", "shiny", "shinythemes", "shinyjs", "readr", "readxl", "stringr")
+packages <- c("R6", "DT", "shiny", "shinythemes", "shinyjs", "readr", "readxl", "roxygen2", "stringr")
 
 # Installer les packages manquants
 installed_packages <- packages %in% rownames(installed.packages())
 if(any(!installed_packages)){
-    install.packages(packages[!installed_packages])
+  install.packages(packages[!installed_packages])
 }
 
 # Importation des fonctions du modèle
-source("model.R")
+source("package/R/model.R")
 
 # Importation des bibliothèques nécessaires
 library(DT)
@@ -44,7 +44,7 @@ detect_delimiter <- function(file_path, n_max = 5) {
 ui <- fluidPage(
   theme = shinytheme("cosmo"),
   useShinyjs(),
-
+  
   tags$h1("Multinomial Logistic Regression", style = "text-align: center;"),
   
   sidebarLayout(
@@ -167,12 +167,12 @@ ui <- fluidPage(
 # Serveur
 server <- function(input, output, session) {
   rv <- reactiveValues(model = NULL, accuracy = NULL, predictions = NULL, temp_files = character(), trigger = 0)
-
+  
   observe({
     withProgress(message = 'File import > ', value = 0, {
       # Réinitialisation de l'interface
       incProgress(0.2, detail = "Interface updating in progress...")
-
+      
       disable("auto_delimiter")
       disable("delimiter")
       disable("upload_data")
@@ -196,12 +196,12 @@ server <- function(input, output, session) {
       output$missing_info <- renderText(NULL)
       rv$model <- NULL
       rv$predictions <- NULL
-
+      
       # Vérification de l'existence du fichier
       incProgress(0.2, detail = "File verification in progress...")
-
+      
       req(input$file)
-
+      
       # Lecture du fichier en fonction de l'extension
       if (grepl("\\.csv$", input$file$name, ignore.case = TRUE)) {
         # Détection automatique du délimiteur
@@ -210,16 +210,16 @@ server <- function(input, output, session) {
           delimiter <- input$delimiter
         } else {
           disable("delimiter")
-
+          
           # Détection du délimiteur
           delimiter <- detect_delimiter(input$file$datapath)
-
+          
           incProgress(0.2, detail = "Delimiter detection in progress...")
-
+          
           # Sélection automatique du délimiteur
           updateSelectInput(session, "delimiter", selected = delimiter)
         }
-
+        
         incProgress(0.2, detail = "File reading in progress...")
         df <- read_delim(input$file$datapath, delim = delimiter, show_col_types = FALSE)
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
@@ -238,7 +238,7 @@ server <- function(input, output, session) {
           enable("auto_delimiter")
         }
         enable("upload_data")
-
+        
         incProgress(1, detail = "Success")
       } else {
         # Désactivation de l'interface
@@ -262,23 +262,23 @@ server <- function(input, output, session) {
         disable("predict")
         rv$model <- NULL
         rv$predictions <- NULL
-
+        
         incProgress(1, detail = "Error")
-
+        
         if (is.null(df)) {
           output$output <- renderText("[WARNING] The file could not be read.")
         }
       }
     })
   })
-
+  
   # Paramétrage des données
   observeEvent(input$upload_data, {
     withProgress(message = 'Data configuration > ', value = 0, {
       
       # Réinitialisation de l'interface
       incProgress(0.1, detail = "Interface updating in progress...")
-
+      
       disable("handle_missing_num_method")
       disable("handle_missing_cat_method")
       disable("handle_missing")
@@ -295,39 +295,39 @@ server <- function(input, output, session) {
       disable("fit_model")
       disable("predict")
       rv$predictions <- NULL
-
+      
       # Vérification de l'existence du fichier
       incProgress(0.1, detail = "Data verification in progress...")
-
+      
       req(input$file)
-
+      
       # Création de l'objet LogisticRegression
       incProgress(0.3, detail = "Model creation in progress...")
-
+      
       tryCatch({
         rv$model <- LogisticRegression$new(
           file_path = input$file$datapath,
           delimiter = input$delimiter
         )
-
+        
         # Récupération des colonnes catégorielles
         cat_cols_names <- rv$model$cat_cols_names
-
+        
         # Mise à jour de la sélection de la variable cible
         updateSelectInput(session, "target", choices = cat_cols_names)
-
+        
         # Calcul de la meilleure variable cible
         best_target <- rv$model$auto_select_target()
-
+        
         # Sélection automatique de la variable cible
         updateSelectInput(session, "target", selected = best_target)
-
+        
         # Récupération des colonnes
         cols_names <- rv$model$cols_names
-
+        
         # Mise à jour de la sélection des colonnes à supprimer
         updateSelectInput(session, "remove_cols", choices = cols_names, selected = NULL)
-
+        
         output$output <- renderText("[INFO] The data has been successfully configured.")
         output$missing_info <- renderText({
           paste0(
@@ -335,7 +335,7 @@ server <- function(input, output, session) {
             "[DATA INFO] Percentage of missing values : ", round(rv$model$missing_values_percent, 2), " %"
           )
         })
-
+        
         # Activation de l'interface
         enable("handle_missing_num_method")
         enable("handle_missing_cat_method")
@@ -366,7 +366,7 @@ server <- function(input, output, session) {
         disable("predict")
         rv$model <- NULL
         rv$predictions <- NULL
-
+        
         output$output <- renderText(paste("[ERROR]", e$message))
         incProgress(1, detail = "Error")
       })
@@ -379,28 +379,28 @@ server <- function(input, output, session) {
       
       # Réinitialisation de l'interface
       incProgress(0.2, detail = "Interface updating in progress...")
-
+      
       disable("learning_rate")
       disable("max_iter")
       disable("batch_size")
       disable("tol")
       disable("fit_model")
       disable("predict")
-
+      
       # Récupération des méthodes sélectionnées par l'utilisateur
       incProgress(0.2, detail = "Retrieving selected methods in progress...")
-
+      
       selected_num_method <- input$handle_missing_num_method
       selected_cat_method <- input$handle_missing_cat_method
       
       # Vérification que les méthodes sont bien sélectionnées
       incProgress(0.2, detail = "Method verification in progress...")
-
+      
       req(selected_num_method, selected_cat_method)
       
       # Gestion des valeurs manquantes avec la méthode sélectionnée
       incProgress(0.2, detail = "Missing values handling in progress...")
-
+      
       tryCatch({
         if (!(selected_num_method == "none" && selected_cat_method == "none")) {
           rv$model$handle_missing_values(num_method = selected_num_method, cat_method = selected_cat_method)
@@ -421,7 +421,7 @@ server <- function(input, output, session) {
         } else {
           output$output <- renderText("[WARNING] Please choose at least one method to handle missing values.")
         }
-
+        
         incProgress(1, detail = "Success")
       }, error = function(e) {
         output$output <- renderText(paste("[ERROR]", e$message))
@@ -429,13 +429,13 @@ server <- function(input, output, session) {
       })
     })
   })
-
+  
   # Sélection automatique de la variable cible
   observeEvent(input$auto_target, {
-
+    
     # Vérification de l'existence du modèle
     req(rv$model)
-
+    
     if (input$auto_target) {
       disable("target")
       
@@ -452,50 +452,50 @@ server <- function(input, output, session) {
       output$output <- renderText("[INFO] Please select the target variable.")
     }
   })
-
+  
   # Sélection automatique des colonnes à supprimer
   observeEvent(input$auto_delete_cols, {
-
-      # Vérification de l'existence du modèle
-      req(rv$model)
-
-      if (input$auto_delete_cols) {
-        withProgress(message = 'Auto column suppression > ', value = 0, {
-          disable("remove_cols")
-          
-          # Calcul des colonnes à supprimer
-          incProgress(0.5, detail = "Calculating columns to be removed in progress...")
-
-          cols_to_remove <- rv$model$auto_remove_columns()
-
-          # Sélection automatique des colonnes à supprimer
-          incProgress(0.2, detail = "Auto selection of columns to be removed in progress...")
-
-          updateSelectInput(session, "remove_cols", selected = cols_to_remove)
-
-          if(is.null(cols_to_remove)) {
-            output$output <- renderText(paste("[INFO] No columns need to be removed."))
-          } else {
-            output$output <- renderText(paste("[INFO] The columns", paste(cols_to_remove, collapse = ", "), "have been automatically selected for deletion."))
-          }
-
-          incProgress(1, detail = "Success")
-        })
-      } else {
-        enable("remove_cols")
+    
+    # Vérification de l'existence du modèle
+    req(rv$model)
+    
+    if (input$auto_delete_cols) {
+      withProgress(message = 'Auto column suppression > ', value = 0, {
+        disable("remove_cols")
         
-        output$output <- renderText("[INFO] Please select the columns to remove.")
-      }
+        # Calcul des colonnes à supprimer
+        incProgress(0.5, detail = "Calculating columns to be removed in progress...")
+        
+        cols_to_remove <- rv$model$auto_remove_columns()
+        
+        # Sélection automatique des colonnes à supprimer
+        incProgress(0.2, detail = "Auto selection of columns to be removed in progress...")
+        
+        updateSelectInput(session, "remove_cols", selected = cols_to_remove)
+        
+        if(is.null(cols_to_remove)) {
+          output$output <- renderText(paste("[INFO] No columns need to be removed."))
+        } else {
+          output$output <- renderText(paste("[INFO] The columns", paste(cols_to_remove, collapse = ", "), "have been automatically selected for deletion."))
+        }
+        
+        incProgress(1, detail = "Success")
+      })
+    } else {
+      enable("remove_cols")
+      
+      output$output <- renderText("[INFO] Please select the columns to remove.")
+    }
     
   })
   
   # Préparation des données
   observeEvent(input$prepare_data, {
     withProgress(message = 'Data preparation > ', value = 0, {
-
+      
       # Réinitialisation de l'interface
       incProgress(0.2, detail = "Interface updating in progress...")
-
+      
       disable("learning_rate")
       disable("max_iter")
       disable("batch_size")
@@ -503,36 +503,36 @@ server <- function(input, output, session) {
       disable("fit_model")
       disable("predict")
       rv$predictions <- NULL
-
+      
       # Obtention des colonnes à supprimer
       remove_cols <- if (is.null(input$remove_cols)) {
         character(0)
       } else {
         input$remove_cols
       }
-
+      
       # Récupération de la taille de l'échantillon de test sélectionnée par l'utilisateur
       incProgress(0.2, detail = "Retrieving selected test size in progress...")
-
+      
       test_size <- input$test_size
-
+      
       # Vérification que la taille de l'échantillon de test est bien sélectionnée
       incProgress(0.2, detail = "Test size verification in progress...")
-
+      
       req(test_size)
-
+      
       # Préparation des données avec le paramètre fourni
       incProgress(0.2, detail = "Data preparation in progress...")
       tryCatch({
         rv$model$prepare_data(target = input$target, columns_to_remove = remove_cols, test_size = test_size)
-
+        
         # Activation de l'interface
         enable("learning_rate")
         enable("max_iter")
         enable("batch_size")
         enable("tol")
         enable("fit_model")
-
+        
         output$output <- renderText("[INFO] The data has been successfully prepared.")
         incProgress(1, detail = "Success")
       }, error = function(e) {
@@ -544,7 +544,7 @@ server <- function(input, output, session) {
         disable("fit_model")
         disable("predict")
         rv$predictions <- NULL
-
+        
         output$output <- renderText(paste("[ERROR]", e$message))
         incProgress(1, detail = "Error")
       })
@@ -554,26 +554,26 @@ server <- function(input, output, session) {
   # Ajustement du modèle
   observeEvent(input$fit_model, {
     withProgress(message = 'Model fitting > ', value = 0, {
-
+      
       # Réinitialisation de l'interface
       incProgress(0.2, detail = "Interface updating in progress...")
-
+      
       disable("predict")
       rv$predictions <- NULL
-
+      
       # Récupération des paramètres du modèle
       incProgress(0.2, detail = "Retrieving model parameters in progress...")
-
+      
       learning_rate <- input$learning_rate
       max_iter <- input$max_iter
       batch_size <- input$batch_size
       tol <- input$tol
-
+      
       # Vérification des paramètres du modèle
       incProgress(0.1, detail = "Model parameters verification in progress...")
-
+      
       req(learning_rate, max_iter, batch_size, tol)
-
+      
       # Validation des paramètres
       incProgress(0.1, detail = "Model parameters validation in progress...")
       if (is.null(learning_rate) || learning_rate <= 0) {
@@ -585,7 +585,7 @@ server <- function(input, output, session) {
         output$output <- renderText("[WARNING] The maximum number of iterations must be a positive integer.")
         return(NULL)
       }
-
+      
       if (is.null(batch_size) || batch_size < 1) {
         output$output <- renderText("[WARNING] The batch size must be a positive integer.")
         return(NULL)
@@ -595,7 +595,7 @@ server <- function(input, output, session) {
         output$output <- renderText("[WARNING] The tolerance must be a positive number.")
         return(NULL)
       }
-
+      
       # Ajustement du modèle avec les paramètres fournis
       incProgress(0.2, detail = "Model fitting in progress...")
       tryCatch({
@@ -603,14 +603,14 @@ server <- function(input, output, session) {
         
         # Activation du bouton prédiction
         enable("predict")
-
+        
         output$output <- renderText("[INFO] The model has been successfully fitted.")
         incProgress(1, detail = "Success")
       }, error = function(e) {
         # Désactivation de l'interface
         disable("predict")
         rv$predictions <- NULL
-
+        
         output$output <- renderText(paste("[ERROR]", e$message))
         incProgress(1, detail = "Error")
       })
@@ -636,19 +636,19 @@ server <- function(input, output, session) {
       })
     })
   })
-
+  
   # Affichage des données
   output$data_preview <- DT::renderDataTable({
     req(rv$model)
     rv$trigger
     rv$model$data
-    }, options = list(
+  }, options = list(
     server = TRUE,
     pageLength = 10,
     autoWidth = TRUE,
     scrollX = TRUE
   ))
-
+  
   # Affichage des prédictions
   output$predictions <- DT::renderDataTable({
     req(rv$predictions)
@@ -659,7 +659,7 @@ server <- function(input, output, session) {
     autoWidth = TRUE,
     scrollX = TRUE
   ))
-
+  
   # Suppression des fichiers temporaires à la fermeture du programme
   session$onSessionEnded(function() {
     unlink(isolate(rv$temp_files), recursive = TRUE, force = TRUE)
