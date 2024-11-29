@@ -526,21 +526,28 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$coefficients <- coefficients
     },
 
-    #' Prepare Data for Modeling
+    
+    #' Predict Function for Logistic Regression Model
     #'
-    #' Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+    #' This function makes predictions on the test data using the fitted logistic regression model. 
+    #' It calculates the scores for each class, applies the softmax function to obtain class probabilities, 
+    #' and predicts the class with the highest probability. The accuracy of the model is then calculated based on the predictions.
     #'
-    #' @param target Character. The name of the target variable.
-    #' @param columns_to_remove Character vector. Names of columns to remove from the predictors.
-    #' @param test_size Numeric. Proportion of the dataset to include in the test split (e.g., 0.2 for 20%).
-    #'
-    #' @return returns a list containing the prepared data, predictors, and training/testing splits.
+    #' @return The function returns the accuracy of the model on the test data.
+    #'   - `accuracy`: The accuracy of the predictions on the test data.
     #'
     #' @examples
     #' \dontrun{
-    #' # Prepare the data with a specified target, columns to remove, and test size
-    #' model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+    #' # Assuming `model` is an instance of the logistic regression model
+    #' accuracy <- model$predict()
+    #' print(accuracy)  # Prints the accuracy of the model on the test data
     #' }
+    #'
+    #' @note 
+    #' The model must be fitted before calling this function (i.e., the `fit` method should be run first).
+    #' This function assumes that the model has a `coefficients` attribute, which contains the learned coefficients 
+    #' for the logistic regression model, as well as `X_test` and `y_test` attributes for the test data and true labels, respectively.
+    #'
     
     # Fonction predict : Prédiction des classes
     predict = function() {
@@ -567,29 +574,28 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       return(self.accuracy)
     },
+    
 
-    #' Prepare Data for Modeling
+    #' Convert Predicted Classes to Class Labels
     #'
-    #' Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+    #' Maps numeric class indices from the predicted outputs to their corresponding class labels.
     #'
-    #' @param target Character. The name of the target variable.
-    #' @param columns_to_remove Character vector. Names of columns to remove from the predictors.
-    #' @param test_size Numeric. Proportion of the dataset to include in the test split (e.g., 0.2 for 20%).
+    #' @return A data frame containing the predicted class labels.
     #'
-    #' @return returns a list containing the prepared data, predictors, and training/testing splits.
+    #' @details
+    #' This function takes the predicted class indices (stored in \code{self$predicted_targets}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
+    #' The mapping is achieved by indexing \code{self$class_labels} with the predicted class indices (incremented by 1 to account for R's 1-based indexing).
     #'
     #' @examples
     #' \dontrun{
-    #' # Prepare the data with a specified target, columns to remove, and test size
-    #' model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+    #' # Convert predicted class indices to labels
+    #' predicted_labels <- model$predictions_to_labels()
+    #'
+    #' # View the first few predicted labels
+    #' print(head(predicted_labels))
     #' }
     
     predictions_to_labels = function() {
-
-      if (is.null(self$class_labels) || length(self$class_labels) == 0) {
-        stop("[Error] class_labels cannot be NULL or empty.")
-      }
-      
       # Conversion of predicted classes to class labels
       predicted_labels <- data.frame(
         Predicted = self$class_labels[self$predicted_targets + 1],  # Map indices to labels
@@ -600,6 +606,27 @@ LogisticRegression <- R6Class("LogisticRegression",
     },
     
     
+    #' Calculate Variable Importance for Logistic Regression Model
+    #'
+    #' Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
+    #'
+    #' @return A data frame with two columns:
+    #' - \code{Variable}: The name of each predictor variable.
+    #' - \code{Importance}: The normalized importance score for each variable.
+    #'
+    #' @details
+    #' This function calculates the importance of each predictor variable by taking the absolute values of the coefficients (excluding the intercept). 
+    #' The sum of these absolute values for each variable is used as a measure of importance. Optionally, the scores are normalized by dividing by the total sum of importance scores.
+    #' The variables are then sorted in descending order of importance.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Calculate variable importance for a fitted model
+    #' importance <- model$variable_importance()
+    #'
+    #' # View the importance of the top 5 variables
+    #' head(importance, 5)
+    #' }
     variable_importance = function() {
       if (is.null(self$coefficients)) {
         stop("[Error] The model has not been fitted yet. Run the `fit` method first.")
@@ -627,6 +654,38 @@ LogisticRegression <- R6Class("LogisticRegression",
       return(importance)
     },
     
+    
+    #' Variable Selection Based on Importance or Threshold
+    #'
+    #' Selects variables (predictors) for the logistic regression model based on their importance scores or a specified threshold. 
+    #' This helps in reducing the model complexity by keeping only the most important predictors.
+    #'
+    #' @param threshold Numeric value (default: 0.05). The minimum importance score a variable must have to be selected. 
+    #' If `num_vars` is provided, this argument is ignored.
+    #' @param num_vars Integer (default: NULL). The exact number of most important variables to select. If provided, 
+    #' the function will select the top `num_vars` based on their importance scores.
+    #'
+    #' @return None. The function modifies the `X_train`, `X_test`, and `predictors` attributes of the model instance.
+    #'
+    #' @details
+    #' This function uses the importance scores of the variables calculated by the `variable_importance` function to filter out 
+    #' less important variables. The selection can either be based on a minimum importance threshold or by selecting a fixed 
+    #' number of top variables.
+    #'
+    #' - If `num_vars` is specified, the function selects the top `num_vars` variables based on their importance score.
+    #' - If `threshold` is provided, the function selects variables whose importance is greater than or equal to the threshold.
+    #'
+    #' After selecting the variables, it reduces the `X_train` and `X_test` datasets to the selected variables and updates the 
+    #' `predictors` attribute.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Select variables based on importance threshold
+    #' model$var_select(threshold = 0.05)
+    #'
+    #' # Select the top 10 most important variables
+    #' model$var_select(num_vars = 10)
+    #' }
     var_select = function(threshold = 0.05, num_vars = NULL) {
       if (is.null(self$coefficients)) {
         stop("[Error] The model has not been fitted yet. Run the `fit` method first.")
@@ -656,6 +715,26 @@ LogisticRegression <- R6Class("LogisticRegression",
     },
     
     
+    #' Generate Confusion Matrix and Performance Metrics
+    #'
+    #' This function computes the confusion matrix based on true labels (`y_test`) and predicted labels (`predicted_targets`),
+    #' and calculates key performance metrics, such as accuracy, precision, recall, and F1-score for each class.
+    #'
+    #' @return A list containing the following elements:
+    #'   - `confusion_matrix`: The confusion matrix (a table of true vs predicted labels).
+    #'   - `accuracy`: Overall accuracy of the predictions.
+    #'   - `precision`: Precision for each class (the ratio of true positives to the total predicted positives for each class).
+    #'   - `recall`: Recall for each class (the ratio of true positives to the total actual positives for each class).
+    #'   - `f1_score`: F1-score for each class (the harmonic mean of precision and recall).
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Assuming `model` is an instance of the logistic regression model
+    #' result <- model$generate_confusion_matrix()
+    #' print(result$confusion_matrix)
+    #' print(paste("Accuracy: ", result$accuracy))
+    #' }
+    #' 
     generate_confusion_matrix = function() {
       # Convert true labels and predicted labels to vectors
       true_labels <- as.vector(self$y_test)                # Convert y_test to a vector
@@ -695,7 +774,27 @@ LogisticRegression <- R6Class("LogisticRegression",
     },
     
     
-    # Méthode predict_proba : Prédiction des probabilités
+    #' Predict Class Probabilities
+    #'
+    #' Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
+    #'
+    #' @return A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
+    #'
+    #' @details
+    #' The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
+    #' - Adds an intercept term to the test data.
+    #' - Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
+    #' - Applies the softmax function to convert logits into probabilities.
+    #'
+    #' If the model has not been trained and `self$coefficients` are not available, the function will raise an error.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Predict probabilities for the test set
+    #' probabilities <- model$predict_proba()
+    #' print(probabilities)
+    #' }
+    
     predict_proba = function() {
       
       X_input <- self$X_test
@@ -799,4 +898,16 @@ compute_entropy <- function(y) {
   freq <- table(y) / length(y)              # Fréquences des classes
   entropy <- -sum(freq * log(freq + 1e-10)) # Entropie
   return(entropy)
+}
+
+# Définir la méthode générique summary pour les objets R6
+summary.R6 <- function(object, ...) {
+  if (!inherits(object, "R6")) {
+    stop("L'objet fourni n'est pas une instance de classe R6.")
+  }
+  if ("summary" %in% names(object)) {
+    object$summary(...)
+  } else {
+    stop("Cet objet ne supporte pas la fonction summary.")
+  }
 }
