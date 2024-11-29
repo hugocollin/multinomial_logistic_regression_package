@@ -7,6 +7,31 @@ library(roxygen2)
 #' LogisticRegression Class
 #'
 #' Implements a multinomial logistic regression model using R6.
+#' 
+#' #' @section Fields:
+#' \describe{
+#'   \item{\code{data}}{Data frame containing the raw data loaded from the specified file.}
+#'   \item{\code{missing_values}}{List or vector indicating missing values in each column.}
+#'   \item{\code{missing_values_percent}}{Percentage of missing values per column.}
+#'   \item{\code{cols_names}}{Character vector containing the names of all columns in the dataset.}
+#'   \item{\code{cat_cols_names}}{Character vector containing the names of categorical columns.}
+#'   \item{\code{target}}{Character indicating the name of the target variable for regression.}
+#'   \item{\code{predictors}}{Character vector containing the names of predictor variables used for the model.}
+#'   \item{\code{prepared_data}}{List containing the processed data after preparation (encoding, normalization, etc.).}
+#'   \item{\code{X}}{Matrix of predictor variables used for model training.}
+#'   \item{\code{y}}{Vector of target variable labels corresponding to the observations.}
+#'   \item{\code{n}}{Total number of observations in the dataset.}
+#'   \item{\code{X_train}}{Matrix of predictor variables for the training set.}
+#'   \item{\code{y_train}}{Vector of target variable labels for the training set.}
+#'   \item{\code{X_test}}{Matrix of predictor variables for the test set.}
+#'   \item{\code{y_test}}{Vector of target variable labels for the test set.}
+#'   \item{\code{predicted_targets}}{Data frame containing the classes predicted by the model on the test set.}
+#'   \item{\code{accuracy}}{Numeric value indicating the accuracy of the model on the test set.}
+#'   \item{\code{coefficients}}{Vector or matrix containing the coefficients of the logistic regression model.}
+#'   \item{\code{levels_map}}{List or vector mapping the levels of the encoded categorical variables.}
+#'   \item{\code{class_labels}}{Character vector containing the labels of the different classes.}
+#'   \item{\code{class_frequencies}}{Vector or table indicating the frequency of each class in the training data.}
+#' }
 #'
 #' @section Methods:
 #' \describe{
@@ -24,7 +49,6 @@ library(roxygen2)
 #'
 #' @docType class
 #' @import R6 readr readxl
-#' @export
 
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
@@ -258,6 +282,20 @@ LogisticRegression <- R6Class("LogisticRegression",
 
       return(best_target)
     },
+
+    #' Automatically remove unnecessary columns
+    #'
+    #' Automatically removes columns with high correlation based on the specified threshold.
+    #'
+    #' @param correlation_threshold Numeric. Threshold for average Cramér's V correlation to consider a column for removal (default is 0.9).
+    #'
+    #' @return A character vector of column names to remove or \code{NULL} if no columns meet the criteria.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Remove columns with average correlation above 0.9
+    #' columns_removed <- model$auto_remove_columns(correlation_threshold = 0.9)
+    #' }
 
     # Fonction de suppression automatique des colonnes inutiles
     auto_remove_columns = function(correlation_threshold = 0.9) {
@@ -552,6 +590,18 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Retourner les probabilités pour chaque classe
       return(softmax_probs)
     },
+
+    #' Summary of the Logistic Regression Model
+    #'
+    #' Prints a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.
+    #'
+    #' @return None. Prints the summary to the console.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Print the model summary
+    #' model$summary()
+    #' }
     
     summary = function() {
       cat("Logistic Regression Multinomial Model - Summary\n")
@@ -579,6 +629,18 @@ LogisticRegression <- R6Class("LogisticRegression",
         cat("Accuracy on Test Data: ", accuracy, "\n")
       }
     },
+
+    #' Print basics informations about the Logistic Regression Model
+    #'
+    #' Prints basic information about the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.
+    #'
+    #' @return None. The method prints information to the console.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Print the model information
+    #' model$print()
+    #' }
     
     print = function() {
       cat("Logistic Regression Multinomial Model\n")

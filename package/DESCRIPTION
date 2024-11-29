@@ -1,0 +1,9 @@
+Package: multinomial_logistic_regression_package
+Type: Package
+Title: Modèle de régression logistique multinomiale
+Version: 0.1.0
+Author: SISE
+Description: Ce package implémente une régression logistique multinomiale.
+License: GPL-3
+Encoding: UTF-8
+RoxygenNote: 7.3.2
