@@ -11,7 +11,7 @@ This package is a simple implementation of the Multinomial Logistic Regression a
 - [Installation of the UI package](#installation-of-the-ui-package)
 - [Usage of the package](#usage-of-the-package)
 - [Usage of the UI package](#usage-of-the-ui-package)
-- [Author](#author)
+- [Authors](#authors)
 
 ## Installation of the package
 
