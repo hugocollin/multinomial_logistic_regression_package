@@ -60,6 +60,6 @@ You can ask for help using the following command :
 
 To use the UI package, you can run _interface.r_ on RStudio. This will open a new window on your browser where you can use the application.
 
-## Author
+## Authors
 
 This project was developed by 3 students from the Master 2 SISE program at the University of Lyon 2 : KPAMEGAN Falonne, COLLIN Hugo and PERBET Lucile.
