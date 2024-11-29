@@ -1,9 +1,8 @@
-Package: multinomial_logistic_regression_package
-Type: Package
-Title: Modèle de régression logistique multinomiale
+Package: mlr
 Version: 0.1.0
+Title: Modèle de régression logistique multinomiale
 Author: SISE
-Maintainer: sise@sise.com
+Maintainer: SISE <sise@sise.com>
 Description: Ce package implémente une régression logistique multinomiale.
 License: GPL-3
 Encoding: UTF-8
