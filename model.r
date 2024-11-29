@@ -122,7 +122,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$data <- data
     },
 
-    # Fonction auto_select_target améliorée
+    # Fonction de sélection automatique de la variable cible
     auto_select_target = function(entropy_threshold = 0.5, correlation_threshold = 0.5, weight_entropy = 0.5, weight_correlation = 0.5) {
       data <- self$data
       cat_cols_names <- self$cat_cols_names
@@ -177,12 +177,42 @@ LogisticRegression <- R6Class("LogisticRegression",
 
       return(best_target)
     },
+
+    # Fonction de suppression automatique des colonnes inutiles
+    auto_remove_columns = function(correlation_threshold = 0.9) {
+      data <- self$data
+      cols_names <- self$cols_names
+
+      # Calcul de la corrélation de Cramer de manière vectorisée
+      cramers_v_matrix <- outer(cols_names, cols_names, Vectorize(function(x, y) {
+        if(x == y) {
+          return(1)
+        } else {
+          return(cramers_v(data[[x]], data[[y]]))
+        }
+      }))
+
+      # Ajustement des valeurs diagonales
+      diag(cramers_v_matrix) <- 1
+
+      # Moyenne des corrélations pour chaque colonne
+      mean_correlations <- rowMeans(cramers_v_matrix, na.rm = TRUE)
+
+      # Identification des colonnes à supprimer
+      columns_to_remove <- cols_names[abs(mean_correlations) > correlation_threshold]
+
+      if (length(columns_to_remove) == 0) {
+        return(NULL)
+      } else {
+        return(columns_to_remove)
+      }
+    },
     
     # Fonction de préparation des données
     prepare_data = function(target, columns_to_remove, test_size) {
       data <- self$data
 
-      # Définition des colonnes de prédiction
+      # Définition des colonnes de prédiction,
       self$predictors <- setdiff(colnames(data), c(target, columns_to_remove))
       
       # Vérification de la cohérence de la suppression des colonnes

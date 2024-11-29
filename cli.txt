@@ -1,0 +1,7 @@
+devtools::install_githug("hugocollin/multinomial_logistic_regression_package")
+
+source("C:/Users/hugoc/Documents/GitHub/multinomial_logistic_regression_package/model.R")
+
+test <- LogisticRegression$new("C:/Users/hugoc/Documents/GitHub/multinomial_logistic_regression_package/data/loan_data.csv", ",")
+
+test$prepare_data(target = "loan_intent", columns_to_remove = "", test_size = 0.2)

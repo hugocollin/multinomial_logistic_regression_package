@@ -95,6 +95,7 @@ ui <- fluidPage(
             label = NULL,
             choices = NULL
           )),
+          disabled(checkboxInput("auto_delete_cols", "Auto delete columns (can be very slow for large datasets)", value = FALSE)),
           p("Columns to remove (optional)"),
           disabled(selectInput(
             "remove_cols",
@@ -180,6 +181,8 @@ server <- function(input, output, session) {
       disable("handle_missing")
       disable("auto_target")
       disable("target")
+      disable("auto_delete_cols")
+      updateCheckboxInput(session, "auto_delete_cols", value = FALSE)
       disable("remove_cols")
       disable("test_size")
       disable("prepare_data")
@@ -246,6 +249,7 @@ server <- function(input, output, session) {
         disable("handle_missing")
         disable("auto_target")
         disable("target")
+        disable("auto_delete_cols")
         disable("remove_cols")
         disable("test_size")
         disable("prepare_data")
@@ -279,6 +283,7 @@ server <- function(input, output, session) {
       disable("handle_missing")
       disable("auto_target")
       disable("target")
+      disable("auto_delete_cols")
       disable("remove_cols")
       disable("test_size")
       disable("prepare_data")
@@ -335,7 +340,7 @@ server <- function(input, output, session) {
         enable("handle_missing_cat_method")
         enable("handle_missing")
         enable("auto_target")
-        enable("remove_cols")
+        enable("auto_delete_cols")
         enable("test_size")
         enable("prepare_data")
         
@@ -347,6 +352,7 @@ server <- function(input, output, session) {
         disable("handle_missing")
         disable("auto_target")
         disable("target")
+        disable("auto_delete_cols")
         disable("remove_cols")
         disable("test_size")
         disable("prepare_data")
@@ -443,6 +449,42 @@ server <- function(input, output, session) {
       
       output$output <- renderText("[INFO] Please select the target variable.")
     }
+  })
+
+  # Sélection automatique des colonnes à supprimer
+  observeEvent(input$auto_delete_cols, {
+
+      # Vérification de l'existence du modèle
+      req(rv$model)
+
+      if (input$auto_delete_cols) {
+        withProgress(message = 'Auto column suppression > ', value = 0, {
+          disable("remove_cols")
+          
+          # Calcul des colonnes à supprimer
+          incProgress(0.5, detail = "Calculating columns to be removed in progress...")
+
+          cols_to_remove <- rv$model$auto_remove_columns()
+
+          # Sélection automatique des colonnes à supprimer
+          incProgress(0.2, detail = "Auto selection of columns to be removed in progress...")
+
+          updateSelectInput(session, "remove_cols", selected = cols_to_remove)
+
+          if(is.null(cols_to_remove)) {
+            output$output <- renderText(paste("[INFO] No columns need to be removed."))
+          } else {
+            output$output <- renderText(paste("[INFO] The columns", paste(cols_to_remove, collapse = ", "), "have been automatically selected for deletion."))
+          }
+
+          incProgress(1, detail = "Success")
+        })
+      } else {
+        enable("remove_cols")
+        
+        output$output <- renderText("[INFO] Please select the columns to remove.")
+      }
+    
   })
   
   # Préparation des données
