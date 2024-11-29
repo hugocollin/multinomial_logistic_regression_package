@@ -6,6 +6,13 @@ This package is a simple implementation of the Multinomial Logistic Regression a
 
 ## Table of contents
 
+- [Description](#description)
+- [Installation of the package](#installation-of-the-package)
+- [Installation of the UI package](#installation-of-the-ui-package)
+- [Usage of the package](#usage-of-the-package)
+- [Usage of the UI package](#usage-of-the-ui-package)
+- [Author](#author)
+
 ## Installation of the package
 
 To install the package on your local machine, you can use the following command :
