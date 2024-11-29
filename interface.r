@@ -437,7 +437,7 @@ server <- function(input, output, session) {
       # Sélection automatique de la variable cible
       updateSelectInput(session, "target", selected = best_target)
       
-      output$output <- renderText(paste("[INFO] La variable cible", best_target, "a été sélectionnée automatiquement."))
+      output$output <- renderText(paste("[INFO] The target variable", best_target, "has been automatically selected."))
     } else {
       enable("target")
       
