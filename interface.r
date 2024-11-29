@@ -54,7 +54,7 @@ ui <- fluidPage(
         
         tabPanel(
           "Data",
-          p(tags$b("Upload and configuration of the data"), style = "text-align: center;"),
+          p(tags$b("Upload data"), style = "text-align: center;"),
           p("Choose a CSV or Excel file (max 1Go)"),
           fileInput("file", label = NULL,
                     accept = c(".csv", ".xlsx")),
@@ -66,21 +66,7 @@ ui <- fluidPage(
             choices = c("Comma (,)" = ",", "Semicolon (;)" = ";", "Colon (:)" = ":", "Hyphen (-)" = "-", "Pipe (|)" = "|", "Slash (/)" = "/", "Tab (\\t)" = "\t"),
             selected = ","
           )),
-          p("Target variable (required)"),
-          disabled(selectInput(
-            "target",
-            label = NULL,
-            choices = NULL
-          )),
-          p("Columns to remove (optional)"),
-          disabled(selectInput(
-            "remove_cols",
-            label = NULL,
-            choices = NULL,
-            multiple = TRUE,
-            selected = NULL
-          )),
-          disabled(actionButton("param_data", "Validate data parameters", width = "100%")),
+          disabled(actionButton("upload_data", "Upload data", width = "100%")),
           p(tags$b("Handle missing values (optional)"), style = "text-align: center;"),
           p("Handle missing numeric values method"),
           disabled(selectInput(
@@ -102,6 +88,21 @@ ui <- fluidPage(
         tabPanel(
           "Modeling",
           p(tags$b("Step 1 : Prepare data"), style = "text-align: center;"),
+          disabled(checkboxInput("auto_target", "Automatic target variable", value = TRUE)),
+          p("Target variable (required)"),
+          disabled(selectInput(
+            "target",
+            label = NULL,
+            choices = NULL
+          )),
+          p("Columns to remove (optional)"),
+          disabled(selectInput(
+            "remove_cols",
+            label = NULL,
+            choices = NULL,
+            multiple = TRUE,
+            selected = NULL
+          )),
           p("Test size (%)"),
           disabled(sliderInput(
             "test_size",
@@ -162,22 +163,24 @@ ui <- fluidPage(
   )
 )
 
+# Serveur
 server <- function(input, output, session) {
   rv <- reactiveValues(model = NULL, accuracy = NULL, predictions = NULL, temp_files = character(), trigger = 0)
 
   observe({
     withProgress(message = 'File import > ', value = 0, {
       # Réinitialisation de l'interface
-      incProgress(0.1, detail = "Interface updating in progress...")
+      incProgress(0.2, detail = "Interface updating in progress...")
 
       disable("auto_delimiter")
       disable("delimiter")
-      disable("target")
-      disable("remove_cols")
-      disable("param_data")
+      disable("upload_data")
       disable("handle_missing_num_method")
       disable("handle_missing_cat_method")
       disable("handle_missing")
+      disable("auto_target")
+      disable("target")
+      disable("remove_cols")
       disable("test_size")
       disable("prepare_data")
       disable("learning_rate")
@@ -191,7 +194,7 @@ server <- function(input, output, session) {
       rv$predictions <- NULL
 
       # Vérification de l'existence du fichier
-      incProgress(0.1, detail = "File verification in progress...")
+      incProgress(0.2, detail = "File verification in progress...")
 
       req(input$file)
 
@@ -207,14 +210,14 @@ server <- function(input, output, session) {
           # Détection du délimiteur
           delimiter <- detect_delimiter(input$file$datapath)
 
-          incProgress(0.1, detail = "Delimiter detection in progress...")
+          incProgress(0.2, detail = "Delimiter detection in progress...")
 
           # Sélection automatique du délimiteur
           updateSelectInput(session, "delimiter", selected = delimiter)
         }
 
         incProgress(0.2, detail = "File reading in progress...")
-        df <- read_delim(input$file$datapath, delim = delimiter)
+        df <- read_delim(input$file$datapath, delim = delimiter, show_col_types = FALSE)
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
       } else if (grepl("\\.xlsx$", input$file$name, ignore.case = TRUE)) {
         incProgress(0.2, detail = "File reading in progress...")
@@ -224,39 +227,26 @@ server <- function(input, output, session) {
         df <- NULL
         output$output <- renderText("[WARNING] Please upload a CSV or Excel file.")
       }
-
-      # Récupération des colonnes catégorielles
-      cat_cols <- colnames(df)[sapply(df, is.character)]
       
-      if ((!is.null(df)) && (length(cat_cols) > 0)) {
-        incProgress(0.2, detail = "Retrieving column names in progress...")
-        
-        # Mise à jour de la sélection de la variable cible
-        updateSelectInput(session, "target", choices = cat_cols)
-        
-        # Mise à jour de la sélection des colonnes à supprimer
-        cols_names <- names(df)
-        updateSelectInput(session, "remove_cols", choices = cols_names, selected = NULL)
-
+      if (!is.null(df)) {
         # Activation de l'interface
         if (grepl("\\.csv$", input$file$name, ignore.case = TRUE)) {
           enable("auto_delimiter")
         }
-        enable("target")
-        enable("remove_cols")
-        enable("param_data")
+        enable("upload_data")
 
         incProgress(1, detail = "Success")
       } else {
         # Désactivation de l'interface
         disable("auto_delimiter")
         disable("delimiter")
-        disable("target")
-        disable("remove_cols")
-        disable("param_data")
+        disable("upload_data")
         disable("handle_missing_num_method")
         disable("handle_missing_cat_method")
         disable("handle_missing")
+        disable("auto_target")
+        disable("target")
+        disable("remove_cols")
         disable("test_size")
         disable("prepare_data")
         disable("learning_rate")
@@ -272,23 +262,24 @@ server <- function(input, output, session) {
 
         if (is.null(df)) {
           output$output <- renderText("[WARNING] The file could not be read.")
-        } else if (length(cat_cols) == 0) {
-          output$output <- renderText("[WARNING] No quantitative column available for the target variable.")
         }
       }
     })
   })
 
   # Paramétrage des données
-  observeEvent(input$param_data, {
+  observeEvent(input$upload_data, {
     withProgress(message = 'Data configuration > ', value = 0, {
       
       # Réinitialisation de l'interface
-      incProgress(0.2, detail = "Interface updating in progress...")
+      incProgress(0.1, detail = "Interface updating in progress...")
 
       disable("handle_missing_num_method")
       disable("handle_missing_cat_method")
       disable("handle_missing")
+      disable("auto_target")
+      disable("target")
+      disable("remove_cols")
       disable("test_size")
       disable("prepare_data")
       disable("learning_rate")
@@ -299,30 +290,37 @@ server <- function(input, output, session) {
       disable("predict")
       rv$predictions <- NULL
 
-      # Vérification de l'existence du fichier et de la variable cible
-      incProgress(0.2, detail = "Data verification in progress...")
+      # Vérification de l'existence du fichier
+      incProgress(0.1, detail = "Data verification in progress...")
 
-      req(input$file, input$target)
-      
-      # Obtention des colonnes à supprimer
-      incProgress(0.2, detail = "Column deletion in progress...")
-
-      remove_cols <- if (is.null(input$remove_cols)) {
-        character(0)
-      } else {
-        input$remove_cols
-      }
+      req(input$file)
 
       # Création de l'objet LogisticRegression
-      incProgress(0.2, detail = "Model creation in progress...")
+      incProgress(0.3, detail = "Model creation in progress...")
 
       tryCatch({
         rv$model <- LogisticRegression$new(
           file_path = input$file$datapath,
-          target = input$target,
-          columns_to_remove = remove_cols,
           delimiter = input$delimiter
         )
+
+        # Récupération des colonnes catégorielles
+        cat_cols_names <- rv$model$cat_cols_names
+
+        # Mise à jour de la sélection de la variable cible
+        updateSelectInput(session, "target", choices = cat_cols_names)
+
+        # Calcul de la meilleure variable cible
+        best_target <- rv$model$auto_select_target()
+
+        # Sélection automatique de la variable cible
+        updateSelectInput(session, "target", selected = best_target)
+
+        # Récupération des colonnes
+        cols_names <- rv$model$cols_names
+
+        # Mise à jour de la sélection des colonnes à supprimer
+        updateSelectInput(session, "remove_cols", choices = cols_names, selected = NULL)
 
         output$output <- renderText("[INFO] The data has been successfully configured.")
         output$missing_info <- renderText({
@@ -336,15 +334,20 @@ server <- function(input, output, session) {
         enable("handle_missing_num_method")
         enable("handle_missing_cat_method")
         enable("handle_missing")
+        enable("auto_target")
+        enable("remove_cols")
         enable("test_size")
         enable("prepare_data")
-
+        
         incProgress(1, detail = "Success")
       }, error = function(e) {
         # Désactivation de l'interface
         disable("handle_missing_num_method")
         disable("handle_missing_cat_method")
         disable("handle_missing")
+        disable("auto_target")
+        disable("target")
+        disable("remove_cols")
         disable("test_size")
         disable("prepare_data")
         disable("learning_rate")
@@ -418,6 +421,29 @@ server <- function(input, output, session) {
       })
     })
   })
+
+  # Sélection automatique de la variable cible
+  observeEvent(input$auto_target, {
+
+    # Vérification de l'existence du modèle
+    req(rv$model)
+
+    if (input$auto_target) {
+      disable("target")
+      
+      # Calcul de la meilleure variable cible
+      best_target <- rv$model$auto_select_target()
+      
+      # Sélection automatique de la variable cible
+      updateSelectInput(session, "target", selected = best_target)
+      
+      output$output <- renderText(paste("[INFO] La variable cible", best_target, "a été sélectionnée automatiquement."))
+    } else {
+      enable("target")
+      
+      output$output <- renderText("[INFO] Please select the target variable.")
+    }
+  })
   
   # Préparation des données
   observeEvent(input$prepare_data, {
@@ -434,6 +460,13 @@ server <- function(input, output, session) {
       disable("predict")
       rv$predictions <- NULL
 
+      # Obtention des colonnes à supprimer
+      remove_cols <- if (is.null(input$remove_cols)) {
+        character(0)
+      } else {
+        input$remove_cols
+      }
+
       # Récupération de la taille de l'échantillon de test sélectionnée par l'utilisateur
       incProgress(0.2, detail = "Retrieving selected test size in progress...")
 
@@ -447,7 +480,7 @@ server <- function(input, output, session) {
       # Préparation des données avec le paramètre fourni
       incProgress(0.2, detail = "Data preparation in progress...")
       tryCatch({
-        rv$model$prepare_data(test_size = test_size)
+        rv$model$prepare_data(target = input$target, columns_to_remove = remove_cols, test_size = test_size)
 
         # Activation de l'interface
         enable("learning_rate")

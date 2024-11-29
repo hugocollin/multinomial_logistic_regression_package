@@ -7,6 +7,12 @@ library(readxl)
 LogisticRegression <- R6Class("LogisticRegression",
   public = list(
     data = NULL,
+    missing_values = NULL,
+    missing_values_percent = NULL,
+    cols_names = NULL,
+    cat_cols_names = NULL,
+    target = NULL,
+    predictors = NULL,
     prepared_data = NULL,
     X = NULL,
     y = NULL,
@@ -15,10 +21,6 @@ LogisticRegression <- R6Class("LogisticRegression",
     y_train = NULL,
     X_test = NULL,
     y_test = NULL,
-    predictors = NULL,
-    target = NULL,
-    missing_values = NULL,
-    missing_values_percent = NULL,
     predicted_targets = NULL,
     accuracy = NULL,
     coefficients = NULL,
@@ -27,7 +29,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     class_frequencies = NULL,
 
     # Constructeur de la classe
-    initialize = function(file_path, target, columns_to_remove, delimiter) {
+    initialize = function(file_path, delimiter) {
       # Chargement d'un fichier CSV
       if (grepl("\\.csv$", file_path, ignore.case = TRUE)) {
         # Lecture du fichier avec le délimiteur spécifié
@@ -62,29 +64,18 @@ LogisticRegression <- R6Class("LogisticRegression",
       } else if (grepl("\\.xlsx$", file_path, ignore.case = TRUE)) {
         data <- read_excel(file_path)
       }
-      
-      # Vérification des colonnes à supprimer
-      if (!is.null(columns_to_remove)) {
-        data <- data[, !(colnames(data) %in% columns_to_remove), drop = FALSE]
-      }
-      
-      # Définition des colonnes de prédiction
-      self$predictors <- setdiff(colnames(data), c(target, columns_to_remove))
-      
-      # Vérification de la cohérence de la suppression des colonnes
-      if (length(self$predictors) == 0) {
-        stop(paste("[Warning] You cannot remove all columns."))
-      }
-      if (!(target %in% colnames(data))) {
-        stop(paste("[Warning] You cannot remove the target column."))
-      }
 
       # Calcul du nombre de valeurs manquantes et du pourcentage
       self$missing_values <- sum(is.na(data))
       self$missing_values_percent <- self$missing_values / (nrow(data) * ncol(data)) * 100
+
+      # Récupération du nom des colonnes
+      self$cols_names <- colnames(data)
+
+      # Récupération des colonnes catégorielles
+      self$cat_cols_names <- colnames(data)[sapply(data, function(col) is.factor(col) || is.character(col))]
       
       self$data <- data
-      self$target <- target
       self$levels_map <- list()
     },
 
@@ -130,10 +121,82 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       self$data <- data
     },
+
+    # Fonction auto_select_target améliorée
+    auto_select_target = function(entropy_threshold = 0.5, correlation_threshold = 0.5, weight_entropy = 0.5, weight_correlation = 0.5) {
+      data <- self$data
+      cat_cols_names <- self$cat_cols_names
+
+      # Filtrage des colonnes avec au moins 2 catégories et moins de 10% de valeurs manquantes
+      cat_cols_names <- cat_cols_names[sapply(data[cat_cols_names], function(col) length(unique(col)) > 1)]
+      cat_cols_names <- cat_cols_names[sapply(data[cat_cols_names], function(col) mean(is.na(col)) <= 0.1)]
+
+      if (length(cat_cols_names) == 0) {
+        stop(paste("[WARNING] No available categorical column found for the target."))
+      }
+
+      # Calcul de l'entropie
+      class_entropy <- sapply(data[cat_cols_names], compute_entropy)
+
+      # Exclusion des colonnes avec une entropie inférieure au seuil
+      cat_cols_names <- cat_cols_names[class_entropy >= entropy_threshold]
+
+      if (length(cat_cols_names) == 0) {
+        stop(paste("[WARNING] No categorical column with sufficient entropy found."))
+      }
+
+      # Calcul de la corrélation de Cramer de manière vectorisée
+      cramers_v_matrix <- outer(cat_cols_names, cat_cols_names, Vectorize(function(x, y) {
+        if(x == y) {
+          return(1)
+        } else {
+          return(cramers_v(data[[x]], data[[y]]))
+        }
+      }))
+
+      diag(cramers_v_matrix) <- 1
+      mean_correlations <- rowMeans(cramers_v_matrix, na.rm = TRUE)
+
+      # Normalisation des scores
+      norm_entropy <- (class_entropy[cat_cols_names] - min(class_entropy[cat_cols_names])) / 
+                    (max(class_entropy[cat_cols_names]) - min(class_entropy[cat_cols_names]))
+      norm_correlation <- 1 - (mean_correlations / max(mean_correlations))
+
+      # Combinaison des scores
+      combined_score <- weight_entropy * norm_entropy + weight_correlation * norm_correlation
+
+      # Sélection des colonnes avec une corrélation moyenne inférieure au seuil
+      selected_cols <- cat_cols_names[mean_correlations < correlation_threshold]
+
+      # Pondération des critères
+      if (length(selected_cols) > 0) {
+        best_target <- selected_cols[which.max(combined_score[selected_cols])]
+      } else {
+        best_target <- cat_cols_names[which.max(combined_score)]
+      }
+
+      return(best_target)
+    },
     
     # Fonction de préparation des données
-    prepare_data = function(test_size, scale=TRUE) {
+    prepare_data = function(target, columns_to_remove, test_size) {
       data <- self$data
+
+      # Définition des colonnes de prédiction
+      self$predictors <- setdiff(colnames(data), c(target, columns_to_remove))
+      
+      # Vérification de la cohérence de la suppression des colonnes
+      if (length(self$predictors) == 0) {
+        stop(paste("[Warning] You cannot remove all columns."))
+      }
+      if (!(target %in% colnames(data))) {
+        stop(paste("[Warning] You cannot remove the target column."))
+      }
+
+      # Vérification des colonnes à supprimer
+      if (!is.null(columns_to_remove)) {
+        data <- data[, !(colnames(data) %in% columns_to_remove), drop = FALSE]
+      }
       
       # Encodage de la variable cible (facteur -> indices numériques)
       if (!is.factor(data[[self$target]])) {
@@ -171,10 +234,8 @@ LogisticRegression <- R6Class("LogisticRegression",
       n <- nrow(X)
       
       # Normalisation des variables numériques
-      if (scale) {
-        numeric_vars <- sapply(X, is.numeric)
-        X[, numeric_vars] <- scale(X[, numeric_vars])
-      }
+      numeric_vars <- sapply(X, is.numeric)
+      X[, numeric_vars] <- scale(X[, numeric_vars])
       
       # Séparation des données en ensembles d'entraînement et de test
       set.seed(123)
@@ -304,3 +365,22 @@ LogisticRegression <- R6Class("LogisticRegression",
     # }
   )
 )
+
+# Fonction de calcul du coefficient de corrélation de Cramer
+cramers_v <- function(x, y) {
+  tbl <- table(x, y)                                  # Tableau de contingence
+  chi2 <- suppressWarnings(chisq.test(tbl))$statistic # Statistique du test du chi2
+  n <- sum(tbl)                                       # Taille de l'échantillon
+  phi2 <- chi2 / n                                    # Coefficient de contingence
+  r <- nrow(tbl)                                      # Nombre de lignes
+  k <- ncol(tbl)                                      # Nombre de colonnes
+  V <- sqrt(phi2 / min(k - 1, r - 1))                 # Coefficient de corrélation de Cramer
+  return(as.numeric(V))
+}
+
+# Fonction de calcul de l'entropie des classes
+compute_entropy <- function(y) {
+  freq <- table(y) / length(y)              # Fréquences des classes
+  entropy <- -sum(freq * log(freq + 1e-10)) # Entropie
+  return(entropy)
+}
