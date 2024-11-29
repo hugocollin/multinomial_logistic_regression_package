@@ -29,8 +29,8 @@ _Before installing the package, make sure you have the following dependencies in
 _You can install them using the following commands :_
 
 ```R
-install.package("devtools")
-install.package("rtools")
+install.packages("devtools")
+install.packages("rtools")
 ```
 ## Installation of the UI package
 
