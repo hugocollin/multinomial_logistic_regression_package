@@ -58,7 +58,7 @@ ui <- fluidPage(
           p("Choose a CSV or Excel file (max 1Go)"),
           fileInput("file", label = NULL,
                     accept = c(".csv", ".xlsx")),
-          disabled(checkboxInput("auto_delimiter", "Automatic delimiter", value = TRUE)),
+          disabled(checkboxInput("auto_delimiter", "Auto delimiter", value = TRUE)),
           p("Delimiter (required only for CSV files)"),
           disabled(selectInput(
             "delimiter",
@@ -88,7 +88,7 @@ ui <- fluidPage(
         tabPanel(
           "Modeling",
           p(tags$b("Step 1 : Prepare data"), style = "text-align: center;"),
-          disabled(checkboxInput("auto_target", "Automatic target variable", value = TRUE)),
+          disabled(checkboxInput("auto_target", "Auto target variable", value = TRUE)),
           p("Target variable (required)"),
           disabled(selectInput(
             "target",

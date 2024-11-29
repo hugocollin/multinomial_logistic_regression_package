@@ -187,10 +187,11 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       # Vérification de la cohérence de la suppression des colonnes
       if (length(self$predictors) == 0) {
-        stop(paste("[Warning] You cannot remove all columns."))
+        stop(paste("[WARNING] You cannot remove all columns."))
       }
-      if (!(target %in% colnames(data))) {
-        stop(paste("[Warning] You cannot remove the target column."))
+      # Vérification si la colonne cible est dans les colonnes à supprimer
+      if (target %in% columns_to_remove) {
+        stop(paste("[WARNING] The target column cannot be removed."))
       }
 
       # Vérification des colonnes à supprimer
@@ -199,15 +200,14 @@ LogisticRegression <- R6Class("LogisticRegression",
       }
       
       # Encodage de la variable cible (facteur -> indices numériques)
-      if (!is.factor(data[[self$target]])) {
-        data[[self$target]] <- as.factor(data[[self$target]])
+      if (!is.factor(data[[target]])) {
+        data[[target]] <- as.factor(data[[target]])
       }
-      self$levels_map[[self$target]] <- levels(data[[self$target]])
-      
+      self$levels_map[[target]] <- levels(data[[target]])
 
       # Conservation des niveaux avant conversion
-      y_factor <- data[[self$target]]
-      data[[self$target]] <- as.numeric(y_factor) - 1
+      y_factor <- data[[target]]
+      data[[target]] <- as.numeric(y_factor) - 1
       
       # Gestion des variables prédictives
       new_columns <- list()
@@ -229,8 +229,8 @@ LogisticRegression <- R6Class("LogisticRegression",
       }
       
       # Séparation de la variable cible et des prédicteurs
-      y <- data[[self$target]]
-      X <- data[, !colnames(data) %in% self$target, drop = FALSE]
+      y <- data[[target]]
+      X <- data[, !colnames(data) %in% target, drop = FALSE]
       n <- nrow(X)
       
       # Normalisation des variables numériques
@@ -355,7 +355,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       self.accuracy <- mean(predicted_classes == self$y_test)
       
       return(self.accuracy)
-    }
+    },
     
     # Méthode predict_proba : Prédiction des probabilités
     predict_proba = function() {
@@ -418,8 +418,6 @@ LogisticRegression <- R6Class("LogisticRegression",
         cat("Model not yet fitted.\n")
       }
     }
-    
-    
   )
 )
 
