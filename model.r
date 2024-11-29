@@ -376,17 +376,124 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Prédiction des classes (classe ayant la probabilité maximale)
       predicted_classes <- apply(softmax_probs, 1, which.max) - 1
       
-      # Conversion des classes prédites en labels
-      self$predicted_targets <- data.frame(
-        Predicted = self$class_labels[predicted_classes + 1],
-        stringsAsFactors = FALSE
-      )
       
-      # Calcul de la précision
+      self$predicted_targets <- predicted_classes
+      # Calcul de la performance
       self.accuracy <- mean(predicted_classes == self$y_test)
       
       return(self.accuracy)
     },
+    
+    predictions_to_labels = function() {
+
+      if (is.null(self$class_labels) || length(self$class_labels) == 0) {
+        stop("[Error] class_labels cannot be NULL or empty.")
+      }
+      
+      # Conversion of predicted classes to class labels
+      predicted_labels <- data.frame(
+        Predicted = self$class_labels[self$predicted_targets + 1],  # Map indices to labels
+        stringsAsFactors = FALSE
+      )
+      
+      return(predicted_labels)
+    },
+    
+    
+    variable_importance = function() {
+      if (is.null(self$coefficients)) {
+        stop("[Error] The model has not been fitted yet. Run the `fit` method first.")
+      }
+      
+      # Extraire les coefficients sans l'intercept (1ère colonne)
+      coef_matrix <- self$coefficients[-1, ]  # Exclure l'intercept
+      
+      # Calcul des scores d'importance
+      importance_scores <- apply(abs(coef_matrix), 1, sum)  # Somme des valeurs absolues des coefficients
+      
+      # Normalisation des scores (optionnelle)
+      importance_scores <- importance_scores / sum(importance_scores)
+      
+      # Associer les scores aux noms des variables
+      variable_names <- colnames(self$X_train)
+      importance <- data.frame(
+        Variable = variable_names,
+        Importance = importance_scores
+      )
+      
+      # Trier par ordre décroissant d'importance
+      importance <- importance[order(-importance$Importance), ]
+      
+      return(importance)
+    },
+    
+    var_select = function(threshold = 0.05, num_vars = NULL) {
+      if (is.null(self$coefficients)) {
+        stop("[Error] The model has not been fitted yet. Run the `fit` method first.")
+      }
+      
+      # Calculer l'importance des variables
+      importance <- self$variable_importance()
+      
+      # Filtrer les variables en fonction du seuil
+      if (!is.null(num_vars)) {
+        # Conserver uniquement les 'num_vars' variables les plus importantes
+        selected_variables <- head(importance$Variable, n = num_vars)
+      } else {
+        # Conserver les variables dont l'importance est >= au seuil
+        selected_variables <- importance$Variable[importance$Importance >= threshold]
+      }
+      
+      # Réduire les données aux variables sélectionnées
+      self$X_train <- self$X_train[, selected_variables, drop = FALSE]
+      self$X_test <- self$X_test[, selected_variables, drop = FALSE]
+      
+      # Mettre à jour les prédicteurs de la classe
+      self$predictors <- selected_variables
+      
+      cat("[Info] Variables selected based on importance:\n")
+      print(selected_variables)
+    },
+    
+    
+    generate_confusion_matrix = function() {
+      # Convert true labels and predicted labels to vectors
+      true_labels <- as.vector(self$y_test)                # Convert y_test to a vector
+      predicted_labels <- as.vector(self$predicted_targets)  # Convert predicted_targets to a vector
+      
+      # Verify consistency of the input lengths
+      if (length(true_labels) != length(predicted_labels)) {
+        stop("[Error] The length of true labels and predicted labels must be the same.")
+      }
+      
+      # Calculate the confusion matrix
+      confusion_matrix <- table(True = true_labels, Predicted = predicted_labels)
+      
+      # Convert to data frame for easier readability (optional)
+      confusion_df <- as.data.frame(as.table(confusion_matrix))
+      colnames(confusion_df) <- c("True", "Predicted", "Frequency")
+      
+      # Calculate performance metrics
+      total <- sum(confusion_matrix)                               # Total observations
+      accuracy <- sum(diag(confusion_matrix)) / total              # Overall accuracy
+      
+      # Calculate metrics for each class
+      precision <- diag(confusion_matrix) / rowSums(confusion_matrix)  # Precision for each class
+      recall <- diag(confusion_matrix) / colSums(confusion_matrix)     # Recall for each class
+      f1_score <- 2 * precision * recall / (precision + recall)        # F1-score for each class
+      
+      # Return results as a list
+      results <- list(
+        confusion_matrix = confusion_matrix,
+        accuracy = accuracy,
+        precision = precision,
+        recall = recall,
+        f1_score = f1_score
+      )
+      
+      return(results)
+    },
+    
     
     # Méthode predict_proba : Prédiction des probabilités
     predict_proba = function() {
@@ -449,6 +556,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     }
   )
 )
+
 
 # Fonction de calcul du coefficient de corrélation de Cramer
 cramers_v <- function(x, y) {
