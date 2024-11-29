@@ -1,5 +1,5 @@
 # Liste des packages requis
-packages <- c("R6", "DT", "shiny", "shinythemes", "shinyjs", "readr", "readxl", "stringr")
+packages <- c("R6", "DT", "shiny", "shinythemes", "shinyjs", "readr", "readxl", "roxygen2", "stringr")
 
 # Installer les packages manquants
 installed_packages <- packages %in% rownames(installed.packages())
