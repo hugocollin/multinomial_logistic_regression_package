@@ -7,32 +7,6 @@
 \description{
 Implements a multinomial logistic regression model using R6.
 }
-\details{
-#' @section Fields:
-\describe{
-  \item{\code{data}}{Data frame containing the raw data loaded from the specified file.}
-  \item{\code{missing_values}}{List or vector indicating missing values in each column.}
-  \item{\code{missing_values_percent}}{Percentage of missing values per column.}
-  \item{\code{cols_names}}{Character vector containing the names of all columns in the dataset.}
-  \item{\code{cat_cols_names}}{Character vector containing the names of categorical columns.}
-  \item{\code{target}}{Character indicating the name of the target variable for regression.}
-  \item{\code{predictors}}{Character vector containing the names of predictor variables used for the model.}
-  \item{\code{prepared_data}}{List containing the processed data after preparation (encoding, normalization, etc.).}
-  \item{\code{X}}{Matrix of predictor variables used for model training.}
-  \item{\code{y}}{Vector of target variable labels corresponding to the observations.}
-  \item{\code{n}}{Total number of observations in the dataset.}
-  \item{\code{X_train}}{Matrix of predictor variables for the training set.}
-  \item{\code{y_train}}{Vector of target variable labels for the training set.}
-  \item{\code{X_test}}{Matrix of predictor variables for the test set.}
-  \item{\code{y_test}}{Vector of target variable labels for the test set.}
-  \item{\code{predicted_targets}}{Data frame containing the classes predicted by the model on the test set.}
-  \item{\code{accuracy}}{Numeric value indicating the accuracy of the model on the test set.}
-  \item{\code{coefficients}}{Vector or matrix containing the coefficients of the logistic regression model.}
-  \item{\code{levels_map}}{List or vector mapping the levels of the encoded categorical variables.}
-  \item{\code{class_labels}}{Character vector containing the labels of the different classes.}
-  \item{\code{class_frequencies}}{Vector or table indicating the frequency of each class in the training data.}
-}
-}
 \section{Methods}{
 
 \describe{
@@ -178,6 +152,56 @@ Prints basic information about the logistic regression model, including the numb
 # Print the model information
 model$print()
 }
+}
+\section{Public fields}{
+\if{html}{\out{<div class="r6-fields">}}
+\describe{
+\item{\code{data}}{Data frame containing the raw data loaded from the specified file.}
+
+\item{\code{missing_values}}{List or vector indicating missing values in each column.}
+
+\item{\code{missing_values_percent}}{Percentage of missing values per column.}
+
+\item{\code{cols_names}}{Character vector containing the names of all columns in the dataset.}
+
+\item{\code{cat_cols_names}}{Character vector containing the names of categorical columns.}
+
+\item{\code{target}}{Character indicating the name of the target variable for regression.}
+
+\item{\code{predictors}}{Character vector containing the names of predictor variables used for the model.}
+
+\item{\code{prepared_data}}{List containing the processed data after preparation (encoding, normalization, etc.).}
+
+\item{\code{X}}{Matrix of predictor variables used for model training.}
+
+\item{\code{y}}{Vector of target variable labels corresponding to the observations.}
+
+\item{\code{n}}{Total number of observations in the dataset.}
+
+\item{\code{X_train}}{Matrix of predictor variables for the training set.}
+
+\item{\code{y_train}}{Vector of target variable labels for the training set.}
+
+\item{\code{X_test}}{Matrix of predictor variables for the test set.}
+
+\item{\code{y_test}}{Vector of target variable labels for the test set.}
+
+\item{\code{predicted_targets}}{Data frame containing the classes predicted by the model on the test set.}
+
+\item{\code{accuracy}}{Numeric value indicating the accuracy of the model on the test set.}
+
+\item{\code{coefficients}}{Vector or matrix containing the coefficients of the logistic regression model.}
+
+\item{\code{levels_map}}{List or vector mapping the levels of the encoded categorical variables.}
+
+\item{\code{class_labels}}{Character vector containing the labels of the different classes.}
+
+\item{\code{class_frequencies}}{Vector or table indicating the frequency of each class in the training data.
+Initialize Logistic Regression Model
+
+Initializes the \code{LogisticRegression} class by loading data from a specified file.}
+}
+\if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{

@@ -8,31 +8,6 @@ library(roxygen2)
 #'
 #' Implements a multinomial logistic regression model using R6.
 #' 
-#' #' @section Fields:
-#' \describe{
-#'   \item{\code{data}}{Data frame containing the raw data loaded from the specified file.}
-#'   \item{\code{missing_values}}{List or vector indicating missing values in each column.}
-#'   \item{\code{missing_values_percent}}{Percentage of missing values per column.}
-#'   \item{\code{cols_names}}{Character vector containing the names of all columns in the dataset.}
-#'   \item{\code{cat_cols_names}}{Character vector containing the names of categorical columns.}
-#'   \item{\code{target}}{Character indicating the name of the target variable for regression.}
-#'   \item{\code{predictors}}{Character vector containing the names of predictor variables used for the model.}
-#'   \item{\code{prepared_data}}{List containing the processed data after preparation (encoding, normalization, etc.).}
-#'   \item{\code{X}}{Matrix of predictor variables used for model training.}
-#'   \item{\code{y}}{Vector of target variable labels corresponding to the observations.}
-#'   \item{\code{n}}{Total number of observations in the dataset.}
-#'   \item{\code{X_train}}{Matrix of predictor variables for the training set.}
-#'   \item{\code{y_train}}{Vector of target variable labels for the training set.}
-#'   \item{\code{X_test}}{Matrix of predictor variables for the test set.}
-#'   \item{\code{y_test}}{Vector of target variable labels for the test set.}
-#'   \item{\code{predicted_targets}}{Data frame containing the classes predicted by the model on the test set.}
-#'   \item{\code{accuracy}}{Numeric value indicating the accuracy of the model on the test set.}
-#'   \item{\code{coefficients}}{Vector or matrix containing the coefficients of the logistic regression model.}
-#'   \item{\code{levels_map}}{List or vector mapping the levels of the encoded categorical variables.}
-#'   \item{\code{class_labels}}{Character vector containing the labels of the different classes.}
-#'   \item{\code{class_frequencies}}{Vector or table indicating the frequency of each class in the training data.}
-#' }
-#'
 #' @section Methods:
 #' \describe{
 #'   \item{\code{initialize(file_path, delimiter)}}{Initializes the model with data from a CSV or Excel file.}
@@ -53,26 +28,67 @@ library(roxygen2)
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
   public = list(
+    #' @field data Data frame containing the raw data loaded from the specified file.
     data = NULL,
+    
+    #' @field missing_values List or vector indicating missing values in each column.
     missing_values = NULL,
+    
+    #' @field missing_values_percent Percentage of missing values per column.
     missing_values_percent = NULL,
+    
+    #' @field cols_names Character vector containing the names of all columns in the dataset.
     cols_names = NULL,
+    
+    #' @field cat_cols_names Character vector containing the names of categorical columns.
     cat_cols_names = NULL,
+    
+    #' @field target Character indicating the name of the target variable for regression.
     target = NULL,
+    
+    #' @field predictors Character vector containing the names of predictor variables used for the model.
     predictors = NULL,
+    
+    #' @field prepared_data List containing the processed data after preparation (encoding, normalization, etc.).
     prepared_data = NULL,
+    
+    #' @field X Matrix of predictor variables used for model training.
     X = NULL,
+    
+    #' @field y Vector of target variable labels corresponding to the observations.
     y = NULL,
+    
+    #' @field n Total number of observations in the dataset.
     n = NULL,
+    
+    #' @field X_train Matrix of predictor variables for the training set.
     X_train = NULL,
+    
+    #' @field y_train Vector of target variable labels for the training set.
     y_train = NULL,
+    
+    #' @field X_test Matrix of predictor variables for the test set.
     X_test = NULL,
+    
+    #' @field y_test Vector of target variable labels for the test set.
     y_test = NULL,
+    
+    #' @field predicted_targets Data frame containing the classes predicted by the model on the test set.
     predicted_targets = NULL,
+    
+    #' @field accuracy Numeric value indicating the accuracy of the model on the test set.
     accuracy = NULL,
+    
+    #' @field coefficients Vector or matrix containing the coefficients of the logistic regression model.
     coefficients = NULL,
+    
+    #' @field levels_map List or vector mapping the levels of the encoded categorical variables.
     levels_map = NULL,
+    
+    #' @field class_labels Character vector containing the labels of the different classes.
     class_labels = NULL,
+    
+    #' @field class_frequencies Vector or table indicating the frequency of each class in the training data.
     class_frequencies = NULL,
 
     #' Initialize Logistic Regression Model
