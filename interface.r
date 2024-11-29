@@ -625,7 +625,7 @@ server <- function(input, output, session) {
         # Prédiction des classes et récupération de l'accuracy
         accuracy <- rv$model$predict()
         output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), " %."))
-        rv$predictions <- rv$model$predicted_targets
+        rv$predictions <- rv$model$predictions_to_labels()
         rv$accuracy <- accuracy
         incProgress(1, detail = "Success")
       }, error = function(e) {
