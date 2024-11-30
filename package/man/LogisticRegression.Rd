@@ -7,6 +7,15 @@
 \description{
 Implements a multinomial logistic regression model using R6.
 }
+\note{
+The model must be fitted before calling this function (i.e., the `fit` method should be run first).
+This function assumes that the model has a `coefficients` attribute, which contains the learned coefficients 
+for the logistic regression model, as well as `X_test` and `y_test` attributes for the test data and true labels, respectively.
+
+Convertpredicted classes to class labels
+
+Maps numeric class indices from the predicted outputs to their corresponding class labels.
+}
 \section{Methods}{
 
 \describe{
@@ -33,7 +42,7 @@ Implements a multinomial logistic regression model using R6.
 # Initialize the model with a CSV file and comma delimiter
 model <- LogisticRegression$new("data/loan_data.csv", ",")
 }
-Handle Missing Values in the Dataset
+Handle missing values in the dataset
 
 Processes missing values in the dataset using specified methods for numerical and categorical variables.
 
@@ -46,7 +55,7 @@ Processes missing values in the dataset using specified methods for numerical an
 # Handle missing values by replacing numerical NAs with mean and categorical NAs with mode
 model$handle_missing_values(num_method = "mean", cat_method = "mode")
 }
-Automatically Select Target Variable
+Automatically select target variable
 
 Automatically selects the target variable based on entropy and correlation thresholds.
 
@@ -62,7 +71,7 @@ model$auto_select_target(entropy_threshold = 0.5, correlation_threshold = 0.3,
 }
 Automatically remove unnecessary columns
 
-Automatically removes columns with high correlation based on the specified threshold.
+Automatically removes columns with high correlation based on the specified threshold. This function can be very slow for large datasets.
 
 
 ## ------------------------------------------------
@@ -73,7 +82,7 @@ Automatically removes columns with high correlation based on the specified thres
 # Remove columns with average correlation above 0.9
 columns_removed <- model$auto_remove_columns(correlation_threshold = 0.9)
 }
-Prepare Data for Modeling
+Prepare data for modeling
 
 Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
 
@@ -100,9 +109,11 @@ model <- LogisticRegression$new("data/loan_data.csv", ",")
 model$prepare_data(target = "default", columns_to_remove = NULL, test_size = 0.2)
 model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 32, tol = 1e-4)
 }
-Prepare Data for Modeling
+Predict function for Logistic Regression Model
 
-Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+This function makes predictions on the test data using the fitted logistic regression model. 
+It calculates the scores for each class, applies the softmax function to obtain class probabilities, 
+and predicts the class with the highest probability. The accuracy of the model is then calculated based on the predictions.
 
 
 ## ------------------------------------------------
@@ -110,12 +121,59 @@ Prepares the dataset by defining the target variable, removing specified columns
 ## ------------------------------------------------
 
 \dontrun{
-# Prepare the data with a specified target, columns to remove, and test size
-model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+# Assuming `model` is an instance of the logistic regression model
+accuracy <- model$predict()
+print(accuracy)  # Prints the accuracy of the model on the test data
 }
-Prepare Data for Modeling
 
-Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+
+## ------------------------------------------------
+## Method `LogisticRegression$predictions_to_labels`
+## ------------------------------------------------
+
+\dontrun{
+# Convert predicted class indices to labels
+predicted_labels <- model$predictions_to_labels()
+
+# View the first few predicted labels
+print(head(predicted_labels))
+}
+Calculate variable importance for Logistic Regression Model
+
+Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
+
+
+## ------------------------------------------------
+## Method `LogisticRegression$variable_importance`
+## ------------------------------------------------
+
+\dontrun{
+# Calculate variable importance for a fitted model
+importance <- model$variable_importance()
+
+# View the importance of the top 5 variables
+head(importance, 5)
+}
+Variable selection based on importance or threshold
+
+Selects variables (predictors) for the logistic regression model based on their importance scores or a specified threshold. 
+This helps in reducing the model complexity by keeping only the most important predictors.
+
+
+## ------------------------------------------------
+## Method `LogisticRegression$var_select`
+## ------------------------------------------------
+
+\dontrun{
+# Select variables based on importance threshold
+model$var_select(threshold = 0.05)
+
+# Select the top 10 most important variables
+model$var_select(num_vars = 10)
+}
+Generate Confusion Matrix and Performance Metrics
+
+Generates a confusion matrix based on actual and predicted labels and calculates key performance metrics such as accuracy, precision, recall, and F1-score for each class.
 
 
 ## ------------------------------------------------
@@ -123,8 +181,9 @@ Prepares the dataset by defining the target variable, removing specified columns
 ## ------------------------------------------------
 
 \dontrun{
-# Prepare the data with a specified target, columns to remove, and test size
-model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+# Predict probabilities for the test set
+probabilities <- model$predict_proba()
+print(probabilities)
 }
 Summary of the Logistic Regression Model
 
@@ -213,6 +272,10 @@ Initializes the \code{LogisticRegression} class by loading data from a specified
 \item \href{#method-LogisticRegression-prepare_data}{\code{LogisticRegression$prepare_data()}}
 \item \href{#method-LogisticRegression-fit}{\code{LogisticRegression$fit()}}
 \item \href{#method-LogisticRegression-predict}{\code{LogisticRegression$predict()}}
+\item \href{#method-LogisticRegression-predictions_to_labels}{\code{LogisticRegression$predictions_to_labels()}}
+\item \href{#method-LogisticRegression-variable_importance}{\code{LogisticRegression$variable_importance()}}
+\item \href{#method-LogisticRegression-var_select}{\code{LogisticRegression$var_select()}}
+\item \href{#method-LogisticRegression-generate_confusion_matrix}{\code{LogisticRegression$generate_confusion_matrix()}}
 \item \href{#method-LogisticRegression-predict_proba}{\code{LogisticRegression$predict_proba()}}
 \item \href{#method-LogisticRegression-summary}{\code{LogisticRegression$summary()}}
 \item \href{#method-LogisticRegression-print}{\code{LogisticRegression$print()}}
@@ -242,7 +305,7 @@ Initializes the \code{LogisticRegression} class by loading data from a specified
 # Initialize the model with a CSV file and comma delimiter
 model <- LogisticRegression$new("data/loan_data.csv", ",")
 }
-Handle Missing Values in the Dataset
+Handle missing values in the dataset
 
 Processes missing values in the dataset using specified methods for numerical and categorical variables.
 
@@ -290,7 +353,7 @@ Processes missing values in the dataset using specified methods for numerical an
 # Handle missing values by replacing numerical NAs with mean and categorical NAs with mode
 model$handle_missing_values(num_method = "mean", cat_method = "mode")
 }
-Automatically Select Target Variable
+Automatically select target variable
 
 Automatically selects the target variable based on entropy and correlation thresholds.
 
@@ -338,7 +401,7 @@ model$auto_select_target(entropy_threshold = 0.5, correlation_threshold = 0.3,
 }
 Automatically remove unnecessary columns
 
-Automatically removes columns with high correlation based on the specified threshold.
+Automatically removes columns with high correlation based on the specified threshold. This function can be very slow for large datasets.
 
 }
 \if{html}{\out{</div>}}
@@ -370,7 +433,7 @@ A character vector of column names to remove or \code{NULL} if no columns meet t
 # Remove columns with average correlation above 0.9
 columns_removed <- model$auto_remove_columns(correlation_threshold = 0.9)
 }
-Prepare Data for Modeling
+Prepare data for modeling
 
 Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
 
@@ -446,9 +509,11 @@ model <- LogisticRegression$new("data/loan_data.csv", ",")
 model$prepare_data(target = "default", columns_to_remove = NULL, test_size = 0.2)
 model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 32, tol = 1e-4)
 }
-Prepare Data for Modeling
+Predict function for Logistic Regression Model
 
-Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
+This function makes predictions on the test data using the fitted logistic regression model. 
+It calculates the scores for each class, applies the softmax function to obtain class probabilities, 
+and predicts the class with the highest probability. The accuracy of the model is then calculated based on the predictions.
 
 }
 \if{html}{\out{</div>}}
@@ -464,35 +529,169 @@ Prepares the dataset by defining the target variable, removing specified columns
 \if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$predict()}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{target}}{Character. The name of the target variable.}
-
-\item{\code{columns_to_remove}}{Character vector. Names of columns to remove from the predictors.}
-
-\item{\code{test_size}}{Numeric. Proportion of the dataset to include in the test split (e.g., 0.2 for 20%).}
-}
-\if{html}{\out{</div>}}
-}
 \subsection{Returns}{
-returns a list containing the prepared data, predictors, and training/testing splits.
+The function returns the accuracy of the model on the test data.
+  - `accuracy`: The accuracy of the predictions on the test data.
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
-# Prepare the data with a specified target, columns to remove, and test size
-model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+# Assuming `model` is an instance of the logistic regression model
+accuracy <- model$predict()
+print(accuracy)  # Prints the accuracy of the model on the test data
 }
-Prepare Data for Modeling
-
-Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
 
 }
 \if{html}{\out{</div>}}
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-predictions_to_labels"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-predictions_to_labels}{}}}
+\subsection{Method \code{predictions_to_labels()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$predictions_to_labels()}\if{html}{\out{</div>}}
+}
+
+\subsection{Details}{
+This function takes the predicted class indices (stored in \code{self$predicted_targets}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
+The mapping is achieved by indexing \code{self$class_labels} with the predicted class indices (incremented by 1 to account for R's 1-based indexing).
+}
+
+\subsection{Returns}{
+A data frame containing the predicted class labels.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+# Convert predicted class indices to labels
+predicted_labels <- model$predictions_to_labels()
+
+# View the first few predicted labels
+print(head(predicted_labels))
+}
+Calculate variable importance for Logistic Regression Model
+
+Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
+
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-variable_importance"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-variable_importance}{}}}
+\subsection{Method \code{variable_importance()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$variable_importance()}\if{html}{\out{</div>}}
+}
+
+\subsection{Details}{
+This function calculates the importance of each predictor variable by taking the absolute values of the coefficients (excluding the intercept). 
+The sum of these absolute values for each variable is used as a measure of importance. Optionally, the scores are normalized by dividing by the total sum of importance scores.
+The variables are then sorted in descending order of importance.
+}
+
+\subsection{Returns}{
+A data frame with two columns:
+- \code{Variable}: The name of each predictor variable.
+- \code{Importance}: The normalized importance score for each variable.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+# Calculate variable importance for a fitted model
+importance <- model$variable_importance()
+
+# View the importance of the top 5 variables
+head(importance, 5)
+}
+Variable selection based on importance or threshold
+
+Selects variables (predictors) for the logistic regression model based on their importance scores or a specified threshold. 
+This helps in reducing the model complexity by keeping only the most important predictors.
+
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-var_select"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-var_select}{}}}
+\subsection{Method \code{var_select()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$var_select(threshold = 0.05, num_vars = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{threshold}}{Numeric value (default: 0.05). The minimum importance score a variable must have to be selected. 
+If `num_vars` is provided, this argument is ignored.}
+
+\item{\code{num_vars}}{Integer (default: NULL). The exact number of most important variables to select. If provided, 
+the function will select the top `num_vars` based on their importance scores.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Details}{
+This function uses the importance scores of the variables calculated by the `variable_importance` function to filter out 
+less important variables. The selection can either be based on a minimum importance threshold or by selecting a fixed 
+number of top variables.
+
+- If `num_vars` is specified, the function selects the top `num_vars` variables based on their importance score.
+- If `threshold` is provided, the function selects variables whose importance is greater than or equal to the threshold.
+
+After selecting the variables, it reduces the `X_train` and `X_test` datasets to the selected variables and updates the 
+`predictors` attribute.
+}
+
+\subsection{Returns}{
+None. The function modifies the `X_train`, `X_test`, and `predictors` attributes of the model instance.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+# Select variables based on importance threshold
+model$var_select(threshold = 0.05)
+
+# Select the top 10 most important variables
+model$var_select(num_vars = 10)
+}
+Generate Confusion Matrix and Performance Metrics
+
+Generates a confusion matrix based on actual and predicted labels and calculates key performance metrics such as accuracy, precision, recall, and F1-score for each class.
+
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-generate_confusion_matrix"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-generate_confusion_matrix}{}}}
+\subsection{Method \code{generate_confusion_matrix()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$generate_confusion_matrix()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list containing:
+\describe{
+  \item{\code{confusion_matrix}}{Confusion matrix as a table.}
+  \item{\code{accuracy}}{Numeric value indicating the model's accuracy.}
+  \item{\code{precision}}{Numeric vector indicating precision for each class.}
+  \item{\code{recall}}{Numeric vector indicating recall for each class.}
+  \item{\code{f1_score}}{Numeric vector indicating F1-score for each class.}
+}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-LogisticRegression-predict_proba"></a>}}
@@ -502,25 +701,24 @@ Prepares the dataset by defining the target variable, removing specified columns
 \if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$predict_proba()}\if{html}{\out{</div>}}
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{target}}{Character. The name of the target variable.}
+\subsection{Details}{
+The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
+- Adds an intercept term to the test data.
+- Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
+- Applies the softmax function to convert logits into probabilities.
 
-\item{\code{columns_to_remove}}{Character vector. Names of columns to remove from the predictors.}
+If the model has not been trained and `self$coefficients` are not available, the function will raise an error.
+}
 
-\item{\code{test_size}}{Numeric. Proportion of the dataset to include in the test split (e.g., 0.2 for 20%).}
-}
-\if{html}{\out{</div>}}
-}
 \subsection{Returns}{
-returns a list containing the prepared data, predictors, and training/testing splits.
+A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
-# Prepare the data with a specified target, columns to remove, and test size
-model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+# Predict probabilities for the test set
+probabilities <- model$predict_proba()
+print(probabilities)
 }
 Summary of the Logistic Regression Model
 
