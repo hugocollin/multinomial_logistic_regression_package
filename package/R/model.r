@@ -613,58 +613,44 @@ LogisticRegression <- R6Class("LogisticRegression",
       return(self.accuracy)
     },
 
-    #' Convertpredicted classes to class labels
+    #' Predict class probabilities
     #'
-    #' Maps numeric class indices from the predicted outputs to their corresponding class labels.
+    #' Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
     #'
-    #' @return A data frame containing the predicted class labels.
+    #' @return A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
     #'
     #' @details
-    #' This function takes the predicted class indices (stored in \code{self$predicted_targets}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
-    #' The mapping is achieved by indexing \code{self$class_labels} with the predicted class indices (incremented by 1 to account for R's 1-based indexing).
+    #' The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
+    #' - Adds an intercept term to the test data.
+    #' - Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
+    #' - Applies the softmax function to convert logits into probabilities.
+    #'
+    #' If the model has not been trained and `self$coefficients` are not available, the function will raise an error.
     #'
     #' @examples
     #' \dontrun{
-    #' # Convert predicted class indices to labels
-    #' predicted_labels <- model$predictions_to_labels()
-    #'
-    #' # View the first few predicted labels
-    #' print(head(predicted_labels))
+    #' # Predict probabilities for the test set
+    #' probabilities <- model$predict_proba()
+    #' print(probabilities)
     #' }
     
-    # Fonction de conversion des prédictions en labels
-    predictions_to_labels = function() {
-      # Conversion des labels prédits en vecteurs
-      predicted_labels <- self$class_labels[self$predicted_targets + 1]
+    # Fonction de prédiction des probabilités
+    predict_proba = function() {
       
-      return(predicted_labels)
-    },
-
-    #' Convert actual class indices to class labels
-    #' 
-    #' Maps numeric class indices from the actual outputs to their corresponding class labels.
-    #' 
-    #' @return A data frame containing the actual class labels.
-    #' 
-    #' @details
-    #' This function takes the actual class indices (stored in \code{self$y_test}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
-    #' The mapping is achieved by indexing \code{self$class_labels} with the actual class indices (incremented by 1 to account for R's 1-based indexing).
-    #' 
-    #' @examples
-    #' \dontrun{
-    #' # Convert actual class indices to labels
-    #' actual_labels <- model$actual_labels()
-    #' 
-    #' # View the first few actual labels
-    #' print(head(actual_labels))
-    #' }
-
-    # Ajout de la méthode actual_labels dans la classe LogisticRegression
-    actual_labels = function() {
-      # Conversion des labels réels en vecteurs
-      actual_labels <- self$class_labels[self$y_test + 1]
+      X_input <- self$X_test
+     
+      # Ajout de l'intercept
+      X_input <- cbind(1, as.matrix(X_input))
       
-      return(actual_labels)
+      # Calcul des scores (logits)
+      scores <- X_input %*% self$coefficients
+      
+      # Application du softmax
+      exp_scores <- exp(scores - apply(scores, 1, max))
+      softmax_probs <- exp_scores / rowSums(exp_scores)
+      
+      # Retourner les probabilités pour chaque classe
+      return(softmax_probs)
     },
     
     #' Calculate variable importance for Logistic Regression Model
@@ -769,6 +755,60 @@ LogisticRegression <- R6Class("LogisticRegression",
       cat("[Info] Variables selected based on importance:\n")
       print(selected_variables)
     },
+
+    #' Convert actual class indices to class labels
+    #' 
+    #' Maps numeric class indices from the actual outputs to their corresponding class labels.
+    #' 
+    #' @return A data frame containing the actual class labels.
+    #' 
+    #' @details
+    #' This function takes the actual class indices (stored in \code{self$y_test}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
+    #' The mapping is achieved by indexing \code{self$class_labels} with the actual class indices (incremented by 1 to account for R's 1-based indexing).
+    #' 
+    #' @examples
+    #' \dontrun{
+    #' # Convert actual class indices to labels
+    #' actual_labels <- model$actual_labels()
+    #' 
+    #' # View the first few actual labels
+    #' print(head(actual_labels))
+    #' }
+
+    # Ajout de la méthode actual_labels dans la classe LogisticRegression
+    actual_labels = function() {
+      # Conversion des labels réels en vecteurs
+      actual_labels <- self$class_labels[self$y_test + 1]
+      
+      return(actual_labels)
+    },
+
+    #' Convertpredicted classes to class labels
+    #'
+    #' Maps numeric class indices from the predicted outputs to their corresponding class labels.
+    #'
+    #' @return A data frame containing the predicted class labels.
+    #'
+    #' @details
+    #' This function takes the predicted class indices (stored in \code{self$predicted_targets}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
+    #' The mapping is achieved by indexing \code{self$class_labels} with the predicted class indices (incremented by 1 to account for R's 1-based indexing).
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Convert predicted class indices to labels
+    #' predicted_labels <- model$predictions_to_labels()
+    #'
+    #' # View the first few predicted labels
+    #' print(head(predicted_labels))
+    #' }
+    
+    # Fonction de conversion des prédictions en labels
+    predictions_to_labels = function() {
+      # Conversion des labels prédits en vecteurs
+      predicted_labels <- self$class_labels[self$predicted_targets + 1]
+      
+      return(predicted_labels)
+    },
     
     #' Generate Confusion Matrix and Performance Metrics
     #'
@@ -828,46 +868,6 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       return(results)
     },
-    
-    #' Predict class probabilities
-    #'
-    #' Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
-    #'
-    #' @return A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
-    #'
-    #' @details
-    #' The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
-    #' - Adds an intercept term to the test data.
-    #' - Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
-    #' - Applies the softmax function to convert logits into probabilities.
-    #'
-    #' If the model has not been trained and `self$coefficients` are not available, the function will raise an error.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Predict probabilities for the test set
-    #' probabilities <- model$predict_proba()
-    #' print(probabilities)
-    #' }
-    
-    # Fonction de prédiction des probabilités
-    predict_proba = function() {
-      
-      X_input <- self$X_test
-     
-      # Ajout de l'intercept
-      X_input <- cbind(1, as.matrix(X_input))
-      
-      # Calcul des scores (logits)
-      scores <- X_input %*% self$coefficients
-      
-      # Application du softmax
-      exp_scores <- exp(scores - apply(scores, 1, max))
-      softmax_probs <- exp_scores / rowSums(exp_scores)
-      
-      # Retourner les probabilités pour chaque classe
-      return(softmax_probs)
-    },
 
     #' Summary of the Logistic Regression Model
     #'
@@ -884,12 +884,12 @@ LogisticRegression <- R6Class("LogisticRegression",
     summary = function() {
       cat("Logistic Regression Multinomial Model - Summary\n")
       cat("---------------------------------------------------\n")
-      cat("Number of Observations (Training): ", nrow(self$X_train), "\n")
-      cat("Number of Observations (Testing): ", nrow(self$X_test), "\n")
-      cat("Number of Predictors: ", ncol(self$X_train), "\n")
-      cat("Number of Classes: ", length(self$class_labels), "\n")
-      cat("Class Labels: ", paste(self$class_labels, collapse = ", "), "\n")
-      cat("Class Frequencies (Training):\n")
+      cat("Number of observations (training): ", nrow(self$X_train), "\n")
+      cat("Number of observations (testing): ", nrow(self$X_test), "\n")
+      cat("Number of predictors: ", ncol(self$X_train), "\n")
+      cat("Number of classes: ", length(self$class_labels), "\n")
+      cat("Class labels: ", paste(self$class_labels, collapse = ", "), "\n")
+      cat("Class frequencies (training):\n")
       print(self$class_frequencies)
       cat("\n")
       
@@ -904,7 +904,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       if (!is.null(self$predicted_targets)) {
         # Calculer l'accuracy sur les données de test si les prédictions existent
         accuracy <- mean(self$predicted_targets == self$y_test)
-        cat("Accuracy on Test Data: ", accuracy, "\n")
+        cat("Accuracy on test data: ", accuracy, "\n")
       }
     },
 
@@ -922,9 +922,9 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     print = function() {
       cat("Logistic Regression Multinomial Model\n")
-      cat("Number of Classes: ", length(self$class_labels), "\n")
-      cat("Number of Predictors: ", ncol(self$X_train), "\n")
-      cat("Class Labels: ", paste(self$class_labels, collapse = ", "), "\n")
+      cat("Number of classes: ", length(self$class_labels), "\n")
+      cat("Number of predictors: ", ncol(self$X_train), "\n")
+      cat("Class labels: ", paste(self$class_labels, collapse = ", "), "\n")
       
       if (!is.null(self$coefficients)) {
         cat("Coefficients (first 5): \n")
