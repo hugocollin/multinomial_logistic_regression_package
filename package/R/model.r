@@ -34,6 +34,9 @@ library(roxygen2)
 
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
+  private = list(
+    state = "initialized"
+  ),
   public = list(
     #' @field data Data frame containing the raw data loaded from the specified file.
     data = NULL,
@@ -117,7 +120,7 @@ LogisticRegression <- R6Class("LogisticRegression",
         tryCatch({
           data <- read_delim(file_path, delim = delimiter, col_types = cols(), progress = FALSE)
         }, error = function(e) {
-          stop(paste("[Warning] Failed to load the CSV file with the delimiter '", delimiter, "'.", sep = ""))
+          stop(paste("[WARNING] Failed to load the CSV file with the delimiter '", delimiter, "'.", sep = ""))
         })
         
         # Vérification de la cohérence des colonnes
@@ -128,7 +131,7 @@ LogisticRegression <- R6Class("LogisticRegression",
         split_lines <- strsplit(lines, delimiter, fixed = TRUE)
         num_cols <- length(split_lines[[1]])
         if (num_cols < 2) {
-          stop(paste("[Warning] Failed to load the CSV file with the delimiter '", delimiter, "'.", sep = ""))
+          stop(paste("[WARNING] Failed to load the CSV file with the delimiter '", delimiter, "'.", sep = ""))
         }
         count_columns <- function(line) {
           return(length(line))
@@ -137,7 +140,7 @@ LogisticRegression <- R6Class("LogisticRegression",
         inconsistant_rows <- which(num_cols_per_line != num_cols)
         if (length(inconsistant_rows) > 0) {
           problematic_lines <- inconsistant_rows
-          stop(paste0("[Warning] Discrepancy detected in the number of columns in the CSV file at lines : ",
+          stop(paste0("[WARNING] Discrepancy detected in the number of columns in the CSV file at lines : ",
                       paste(problematic_lines, collapse = ", "), "."))
         }
       
@@ -188,6 +191,11 @@ LogisticRegression <- R6Class("LogisticRegression",
 
     # Fonction de gestion des valeurs manquantes
     handle_missing_values = function(num_method = c("none", "mean", "median", "mode", "remove"), cat_method = c("none", "mode", "remove")) {
+      if (private$state != "initialized") {
+        stop("[WARNING] You must initialize the model by calling the `new` method before handling missing values.")
+      }
+
+      # Vérification des arguments
       num_method <- match.arg(num_method)
       cat_method <- match.arg(cat_method)
       data <- self$data
@@ -249,6 +257,11 @@ LogisticRegression <- R6Class("LogisticRegression",
 
     # Fonction de sélection automatique de la variable cible
     auto_select_target = function(entropy_threshold = 0.5, correlation_threshold = 0.5, weight_entropy = 0.5, weight_correlation = 0.5) {
+      if (private$state != "initialized") {
+        stop("[WARNING] You must initialize the model by calling the `new` method before handling missing values.")
+      }
+
+      # Récupération des données
       data <- self$data
       cat_cols_names <- self$cat_cols_names
 
@@ -364,6 +377,11 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     # Fonction de préparation des données
     prepare_data = function(target, columns_to_remove, test_size) {
+      if (private$state != "initialized") {
+        stop("[WARNING] You must initialize the model by calling the `new` method before handling missing values.")
+      }
+
+      # Récupération des données
       data <- self$data
       self$target <- target
 
@@ -438,6 +456,9 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$y_train <- y_train
       self$X_test <- X_test
       self$y_test <- y_test
+
+      # Mise à jour de l'état
+      private$state <- "data_prepared"
     },
 
     #' Fit the Logistic Regression Model
@@ -460,6 +481,11 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     # Fonction fit : Ajustement du modèle
     fit = function(learning_rate, max_iter, batch_size, tol) {
+      if (private$state != "data_prepared") {
+        stop("[WARNING] You must prepare the data before fitting the model by calling the `prepare_data` method.")
+      }
+
+      # Récupération des données d'entraînement
       y <- self$y_train
       X <- self$X_train
 
@@ -528,6 +554,9 @@ LogisticRegression <- R6Class("LogisticRegression",
       }
       
       self$coefficients <- coefficients
+
+      # Mise à jour de l'état
+      private$state <- "model_fitted"
     },
     
     #' Predict function for Logistic Regression Model
@@ -554,6 +583,10 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     # Fonction predict : Prédiction des classes
     predict = function() {
+      if (private$state != "model_fitted") {
+        stop("[WARNING] You must fit the model before making predictions by calling the `fit` method.")
+      }
+
       # Récupération des données de test
       X <- self$X_test
       
@@ -574,6 +607,8 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$predicted_targets <- predicted_classes
       # Calcul de la performance
       self.accuracy <- mean(predicted_classes == self$y_test)
+
+      private$state <- "predicted"
       
       return(self.accuracy)
     },
