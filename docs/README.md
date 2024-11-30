@@ -56,6 +56,12 @@ You can ask for help using the following command :
 ?LogisticRegression
 ```
 
+You can use the following function to create a model :
+
+```R
+model <- LogisticRegression("path/to/your/data.extention", "delimiter")
+```
+
 ## Usage of the UI package
 
 To use the UI package, you can run _interface.r_ on RStudio. This will open a new window on your browser where you can use the application.
