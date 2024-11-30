@@ -32,7 +32,7 @@ library(roxygen2)
 #'
 #' @examples
 #' # Initialization of the model
-#' # model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
+#' model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
 #' @name LogisticRegression
 
 # Définition de la classe LogisticRegression
@@ -111,7 +111,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' @examples
     #' \dontrun{
     #' # Initialization of the model
-    #' # model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
+    #' model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
     #' }
 
     # Constructeur de la classe
@@ -806,6 +806,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     #'
     #' @examples
     #' \dontrun{
+    #' # Generate a confusion matrix and performance metrics
     #' results <- model$generate_confusion_matrix()
     #' print(results$confusion_matrix)
     #' print(results$accuracy)

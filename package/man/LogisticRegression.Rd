@@ -68,7 +68,7 @@ Computes the predicted probabilities for each class using the softmax function a
 
 \examples{
 # Initialization of the model
-# model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
+model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
 
 ## ------------------------------------------------
 ## Method `LogisticRegression$new`
@@ -76,7 +76,7 @@ Computes the predicted probabilities for each class using the softmax function a
 
 \dontrun{
 # Initialization of the model
-# model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
+model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
 }
 Handle missing values in the dataset
 
@@ -215,6 +215,7 @@ Generates a confusion matrix based on actual and predicted labels and calculates
 ## ------------------------------------------------
 
 \dontrun{
+# Generate a confusion matrix and performance metrics
 results <- model$generate_confusion_matrix()
 print(results$confusion_matrix)
 print(results$accuracy)
@@ -335,7 +336,7 @@ Initializes the \code{LogisticRegression} class by loading data from a specified
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
 # Initialization of the model
-# model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
+model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
 }
 Handle missing values in the dataset
 
@@ -749,6 +750,7 @@ A list containing:
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
+# Generate a confusion matrix and performance metrics
 results <- model$generate_confusion_matrix()
 print(results$confusion_matrix)
 print(results$accuracy)

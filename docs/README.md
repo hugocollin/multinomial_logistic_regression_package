@@ -59,33 +59,58 @@ You can ask for help using the following command :
 Here is an example of how to use the package :
 
 ```R
+# Load the package
 library(sisemlr)
 
-model <- LogisticRegression$new(
-    file_path = "path/to/your/data.extention",
-    delimiter = "delimiter"
-    )
+# Initialization of the model
+model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
 
-model$prepare_data(
-    target = "target_column",
-    columns_to_remove = c("feature1", "feature2", "feature3"),
-    test_size = 0.3
-    )
+# Handle missing values by replacing numerical NAs with mean and categorical NAs with mode
+model$handle_missing_values(num_method = "mean", cat_method = "mode")
 
-model$fit(
-    learning_rate = 0.01,
-    max_iter = 1000,
-    batch_size = 50,
-    tol = 0.001
-    )
+# Automatically select target with specified thresholds
+model$target_select(entropy_threshold = 0.5, correlation_threshold = 0.3, weight_entropy = 0.7, weight_correlation = 0.3)
 
-model$predict()
+# Prepare the data with a specified target, columns to remove, and test size
+model$prepare_data(target = "target_column", columns_to_remove = c("feature1", "feature2", "feature3"), test_size = 0.3)
 
-model$print()
+# Fit the model with specified hyperparameters
+model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 50, tol = 0.001)
 
+# Calculate variable importance for a fitted model
+importance <- model$var_importance()
+
+# View the importance of the variables
+print(importance)
+
+# Select variables based on importance threshold
+model$var_select(threshold = 0.05)
+
+# Select the top 10 most important variables
+model$var_select(num_vars = 10)
+
+# Make predictions on the test set
+accuracy <- model$predict()
+
+# Print the accuracy of the model on the test data
+print(accuracy)
+
+# Predict probabilities for the test set
+probabilities <- model$predict_proba()
+
+# Print the predicted probabilities
+print(probabilities)
+
+# Print the model summary
 model$summary()
 
-model$generate_confusion_matrix()
+# Print the model information
+model$print()
+
+# Generate a confusion matrix and performance metrics
+results <- model$generate_confusion_matrix()
+print(results$confusion_matrix)
+print(results$accuracy)
 ```
 
 ## Usage of the UI package
