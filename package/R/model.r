@@ -810,6 +810,9 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' results <- model$generate_confusion_matrix()
     #' print(results$confusion_matrix)
     #' print(results$accuracy)
+    #' print(results$precision)
+    #' print(results$recall)
+    #' print(results$f1_score)
     #' }
 
     # Fonction de génération de la matrice de confusion et des métriques de performance

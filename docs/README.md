@@ -83,12 +83,6 @@ importance <- model$var_importance()
 # View the importance of the variables
 print(importance)
 
-# Select variables based on importance threshold
-model$var_select(threshold = 0.05)
-
-# Select the top 10 most important variables
-model$var_select(num_vars = 10)
-
 # Make predictions on the test set
 accuracy <- model$predict()
 
@@ -111,6 +105,9 @@ model$print()
 results <- model$generate_confusion_matrix()
 print(results$confusion_matrix)
 print(results$accuracy)
+print(results$precision)
+print(results$recall)
+print(results$f1_score)
 ```
 
 ## Usage of the UI package

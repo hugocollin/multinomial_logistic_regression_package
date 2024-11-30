@@ -219,6 +219,9 @@ Generates a confusion matrix based on actual and predicted labels and calculates
 results <- model$generate_confusion_matrix()
 print(results$confusion_matrix)
 print(results$accuracy)
+print(results$precision)
+print(results$recall)
+print(results$f1_score)
 }
 Summary of the Logistic Regression Model
 
@@ -754,6 +757,9 @@ A list containing:
 results <- model$generate_confusion_matrix()
 print(results$confusion_matrix)
 print(results$accuracy)
+print(results$precision)
+print(results$recall)
+print(results$f1_score)
 }
 Summary of the Logistic Regression Model
 
