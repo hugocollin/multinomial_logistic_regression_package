@@ -633,29 +633,28 @@ server <- function(input, output, session) {
     withProgress(message = 'Predicting classes > ', value = 0, {
       incProgress(0.5, detail = "Prediction in progress...")
       tryCatch({
-        # Exécuter la prédiction et obtenir l'accuracy
+        # Prédiction des classes
         accuracy <- rv$model$predict()
         rv$accuracy <- accuracy
         
-        # Récupérer les prédictions et les vraies classes
-        predictions <- rv$model$predicted_targets  # Assurez-vous que cette méthode retourne les prédictions
-        actual <- rv$model$y_test  # Assurez-vous que y_test est accessible
+        # Récupération des prédictions et des classes réelles
+        predictions <- rv$model$predictions_to_labels()
+        actual <- rv$model$actual_labels()
         
-        # Créer une table avec les classes réelles et prédite
+        # Création d'un data frame pour les prédictions
         rv$predictions <- data.frame(
           Real_class = actual,
           Predicted_class = predictions
         )
         
-        # Calculer la matrice de confusion
+        # Calcul de la matrice de confusion
+        print(rv$predictions$Real_class)
+        print(rv$predictions$Predicted_class)
         confusion_mat <- table(rv$predictions$Real_class, rv$predictions$Predicted_class)
         rv$confusion_matrix <- confusion_mat
         
-        # Mettre à jour les affichages
+        # Mise à jour de l'interface
         output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), "%."))
-        
-        # Activer le bouton de prédiction si nécessaire
-        enable("predict")
         
         incProgress(1, detail = "Success")
       }, error = function(e) {
@@ -668,29 +667,8 @@ server <- function(input, output, session) {
       })
     })
   })
-  
-  # # Prédiction des classes
-  # observeEvent(input$predict, {
-  #   withProgress(message = 'Predicting classes > ', value = 0, {
-  #     incProgress(0.5, detail = "Prediction in progress...")
-  #     tryCatch({
-  #       # Prédiction des classes et récupération de l'accuracy
-  #       accuracy <- rv$model$predict()
-  #       output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), " %."))
-  #       rv$predictions <- rv$model$predictions_to_labels()
-  #       rv$accuracy <- accuracy
-  #       incProgress(1, detail = "Success")
-  #     }, error = function(e) {
-  #       output$output <- renderText(paste("[ERROR]", e$message))
-  #       rv$confusion_matrix <- NULL
-  #       rv$predictions <- NULL
-  #       rv$accuracy <- NULL
-  #       incProgress(1, detail = "Error")
-  #     })
-  #   })
-  # })
 
-  # UI pour l'aperçu des données
+  # Affichage dynamique pour l'aperçu des données
   output$data_preview_ui <- renderUI({
     req(rv$model)
     tagList(
@@ -700,7 +678,7 @@ server <- function(input, output, session) {
     )
   })
   
-  # UI pour la matrice de confusion
+  # Affichage dynamique pour la matrice de confusion
   output$confusion_matrix_ui <- renderUI({
     req(rv$confusion_matrix)
     tagList(
@@ -710,7 +688,7 @@ server <- function(input, output, session) {
     )
   })
   
-  # UI pour les prédictions détaillées
+  # Affichage dynamique pour les prédictions détaillées
   output$predictions_ui <- renderUI({
     req(rv$predictions)
     tagList(
@@ -731,7 +709,7 @@ server <- function(input, output, session) {
     scrollX = TRUE
   ))
 
-  # Afficher la matrice de confusion
+  # Affichage de la matrice de confusion
   output$confusion_matrix <- DT::renderDataTable({
     as.data.frame.matrix(rv$confusion_matrix)
   }, options = list(
@@ -741,7 +719,7 @@ server <- function(input, output, session) {
     ordering = FALSE
   ))
   
-  # Afficher la table des prédictions détaillées
+  # Affichage de la table des prédictions détaillées
   output$predictions <- DT::renderDataTable({
     rv$predictions
   }, options = list(

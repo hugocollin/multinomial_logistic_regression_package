@@ -599,13 +599,37 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     # Fonction de conversion des prédictions en labels
     predictions_to_labels = function() {
-      # Conversion of predicted classes to class labels
-      predicted_labels <- data.frame(
-        Predicted = self$class_labels[self$predicted_targets + 1],
-        stringsAsFactors = FALSE
-      )
+      # Conversion des labels prédits en vecteurs
+      predicted_labels <- self$class_labels[self$predicted_targets + 1]
       
       return(predicted_labels)
+    },
+
+    #' Convert actual class indices to class labels
+    #' 
+    #' Maps numeric class indices from the actual outputs to their corresponding class labels.
+    #' 
+    #' @return A data frame containing the actual class labels.
+    #' 
+    #' @details
+    #' This function takes the actual class indices (stored in \code{self$y_test}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
+    #' The mapping is achieved by indexing \code{self$class_labels} with the actual class indices (incremented by 1 to account for R's 1-based indexing).
+    #' 
+    #' @examples
+    #' \dontrun{
+    #' # Convert actual class indices to labels
+    #' actual_labels <- model$actual_labels()
+    #' 
+    #' # View the first few actual labels
+    #' print(head(actual_labels))
+    #' }
+
+    # Ajout de la méthode actual_labels dans la classe LogisticRegression
+    actual_labels = function() {
+      # Conversion des labels réels en vecteurs
+      actual_labels <- self$class_labels[self$y_test + 1]
+      
+      return(actual_labels)
     },
     
     #' Calculate variable importance for Logistic Regression Model

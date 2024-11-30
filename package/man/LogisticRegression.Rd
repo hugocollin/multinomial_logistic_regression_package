@@ -141,6 +141,22 @@ predicted_labels <- model$predictions_to_labels()
 # View the first few predicted labels
 print(head(predicted_labels))
 }
+Convert actual class indices to class labels
+
+Maps numeric class indices from the actual outputs to their corresponding class labels.
+
+
+## ------------------------------------------------
+## Method `LogisticRegression$actual_labels`
+## ------------------------------------------------
+
+\dontrun{
+# Convert actual class indices to labels
+actual_labels <- model$actual_labels()
+
+# View the first few actual labels
+print(head(actual_labels))
+}
 Calculate variable importance for Logistic Regression Model
 
 Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
@@ -274,6 +290,7 @@ Initializes the \code{LogisticRegression} class by loading data from a specified
 \item \href{#method-LogisticRegression-fit}{\code{LogisticRegression$fit()}}
 \item \href{#method-LogisticRegression-predict}{\code{LogisticRegression$predict()}}
 \item \href{#method-LogisticRegression-predictions_to_labels}{\code{LogisticRegression$predictions_to_labels()}}
+\item \href{#method-LogisticRegression-actual_labels}{\code{LogisticRegression$actual_labels()}}
 \item \href{#method-LogisticRegression-variable_importance}{\code{LogisticRegression$variable_importance()}}
 \item \href{#method-LogisticRegression-var_select}{\code{LogisticRegression$var_select()}}
 \item \href{#method-LogisticRegression-generate_confusion_matrix}{\code{LogisticRegression$generate_confusion_matrix()}}
@@ -572,6 +589,41 @@ predicted_labels <- model$predictions_to_labels()
 
 # View the first few predicted labels
 print(head(predicted_labels))
+}
+Convert actual class indices to class labels
+
+Maps numeric class indices from the actual outputs to their corresponding class labels.
+
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-actual_labels"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-actual_labels}{}}}
+\subsection{Method \code{actual_labels()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$actual_labels()}\if{html}{\out{</div>}}
+}
+
+\subsection{Details}{
+This function takes the actual class indices (stored in \code{self$y_test}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
+The mapping is achieved by indexing \code{self$class_labels} with the actual class indices (incremented by 1 to account for R's 1-based indexing).
+}
+
+\subsection{Returns}{
+A data frame containing the actual class labels.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+# Convert actual class indices to labels
+actual_labels <- model$actual_labels()
+
+# View the first few actual labels
+print(head(actual_labels))
 }
 Calculate variable importance for Logistic Regression Model
 
