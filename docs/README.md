@@ -56,10 +56,36 @@ You can ask for help using the following command :
 ?LogisticRegression
 ```
 
-You can use the following function to create a model :
+Here is an example of how to use the package :
 
 ```R
-model <- LogisticRegression("path/to/your/data.extention", "delimiter")
+library(sisemlr)
+
+model <- LogisticRegression$new(
+    file_path = "path/to/your/data.extention",
+    delimiter = "delimiter"
+    )
+
+model$prepare_data(
+    target = "target_column",
+    columns_to_remove = c("feature1", "feature2", "feature3"),
+    test_size = 0.3
+    )
+
+model$fit(
+    learning_rate = 0.01,
+    max_iter = 1000,
+    batch_size = 50,
+    tol = 0.001
+    )
+
+model$predict()
+
+model$print()
+
+model$summary()
+
+model$generate_confusion_matrix()
 ```
 
 ## Usage of the UI package
