@@ -9,27 +9,30 @@ library(roxygen2)
 #' Implements a multinomial logistic regression model using R6.
 #' 
 #' @section Methods:
-#' \describe{
-#'   \item{\code{initialize(file_path, delimiter)}}{Initializes the model with data from a CSV or Excel file.}
-#'   \item{\code{handle_missing_values(num_method, cat_method)}}{Handles missing values in the dataset.}
-#'   \item{\code{target_select(entropy_threshold, correlation_threshold, weight_entropy, weight_correlation)}}{Automatically selects the target variable based on entropy and correlation thresholds.}
-#'   \item{\code{auto_remove_columns(correlation_threshold)}}{Automatically removes columns with high correlation.}
-#'   \item{\code{prepare_data(target, columns_to_remove, test_size)}}{Prepares the data for training by defining predictors and splitting into training and testing sets.}
-#'   \item{\code{fit(learning_rate, max_iter, batch_size, tol)}}{Fits the logistic regression model using gradient descent.}
-#'   \item{\code{predict()}}{Predicts classes for the test set and returns accuracy.}
-#'   \item{\code{predict_proba()}}{Predicts class probabilities for the test set.}
-#'   \item{\code{summary()}}{Prints a summary of the model.}
-#'   \item{\code{print()}}{Prints basic information about the model.}
-#' }
+#'\describe{
+#'  \item{\code{initialize}}{Initializes the \code{LogisticRegression} class by loading data from a specified file.}
+#'  \item{\code{handle_missing_values}}{Handles missing values in the dataset using specified methods for numerical and categorical variables.}
+#'  \item{\code{target_select}}{Automatically selects the target variable based on entropy and correlation thresholds.}
+#'  \item{\code{prepare_data}}{Prepares the data for modeling by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.}
+#'  \item{\code{fit}}{Fits the logistic regression model using gradient descent.}
+#'  \item{\code{var_importance}}{Calculates the importance of variables based on the coefficients of the fitted model.}
+#'  \item{\code{var_select}}{Selects predictor variables based on their importance scores or a specified threshold.}
+#'  \item{\code{predict}}{Makes predictions on the test data using the fitted model and calculates the model's accuracy.}
+#'  \item{\code{predict_proba}}{Calculates the predicted probabilities for each class using the softmax function applied to the model's coefficients and test data.}
+#'  \item{\code{actual_labels}}{Converts the actual class indices to their corresponding class labels.}
+#'  \item{\code{predictions_to_labels}}{Converts the predicted class indices to their corresponding class labels.}
+#'  \item{\code{generate_confusion_matrix}}{Generates a confusion matrix and calculates performance metrics such as precision, recall, and F1-score for each class.}
+#'  \item{\code{summary}}{Displays a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.}
+#'  \item{\code{print}}{Displays basic information about the logistic regression model, including the number of classes, predictors, class labels, and coefficients if available.}
+#'}
 #'
 #' @docType class
 #' @import R6 readr readxl
 #' @export
 #'
 #' @examples
-#' # Example usage
-#' # model <- LogisticRegression$new("data.csv", ",")
-#'
+#' # Initialization of the model
+#' # model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
 #' @name LogisticRegression
 
 # Définition de la classe LogisticRegression
@@ -105,11 +108,10 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' @param file_path Character. The path to the data file (CSV or Excel).
     #' @param delimiter Character. The delimiter used in the CSV file (e.g., "," for comma).
     #'
-    #'
     #' @examples
     #' \dontrun{
-    #' # Initialize the model with a CSV file and comma delimiter
-    #' model <- LogisticRegression$new("data/loan_data.csv", ",")
+    #' # Initialization of the model
+    #' # model <- LogisticRegression$new(file_path = "path/to/your/data.extention", delimiter = "delimiter")
     #' }
 
     # Constructeur de la classe
@@ -182,12 +184,15 @@ LogisticRegression <- R6Class("LogisticRegression",
     #'     \item \code{"remove"}: Remove rows with missing categorical values.
     #'   }
     #'
+    #' @return Invisibly updates the dataset by handling missing values.
     #'
     #' @examples
     #' \dontrun{
     #' # Handle missing values by replacing numerical NAs with mean and categorical NAs with mode
     #' model$handle_missing_values(num_method = "mean", cat_method = "mode")
     #' }
+    #' 
+    #' @note The \code{handle_missing_values} method must be called after initializing the model using the \code{new} method.
 
     # Fonction de gestion des valeurs manquantes
     handle_missing_values = function(num_method = c("none", "mean", "median", "mode", "remove"), cat_method = c("none", "mode", "remove")) {
@@ -251,9 +256,10 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' @examples
     #' \dontrun{
     #' # Automatically select target with specified thresholds
-    #' model$target_select(entropy_threshold = 0.5, correlation_threshold = 0.3, 
-    #'                         weight_entropy = 0.7, weight_correlation = 0.3)
+    #' model$target_select(entropy_threshold = 0.5, correlation_threshold = 0.3, weight_entropy = 0.7, weight_correlation = 0.3)
     #' }
+    #' 
+    #' @note The \code{target_select} method must be called after initializing the model using the \code{new} method.
 
     # Fonction de sélection automatique de la variable cible
     target_select = function(entropy_threshold = 0.5, correlation_threshold = 0.5, weight_entropy = 0.5, weight_correlation = 0.5) {
@@ -324,12 +330,15 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' @param columns_to_remove Character vector. Names of columns to remove from the predictors.
     #' @param test_size Numeric. Proportion of the dataset to include in the test split (e.g., 0.3 for 30%).
     #'
+    #' @return Invisibly returns the prepared data and updates the model attributes.
     #'
     #' @examples
     #' \dontrun{
     #' # Prepare the data with a specified target, columns to remove, and test size
-    #' model$prepare_data(target = "default", columns_to_remove = c("id", "timestamp"), test_size = 0.3)
+    #' model$prepare_data(target = "target_column", columns_to_remove = c("feature1", "feature2", "feature3"), test_size = 0.3)
     #' }
+    #' 
+    #' @note The \code{prepare_data} method must be called after initializing the model using the \code{new} method.
     
     # Fonction de préparation des données
     prepare_data = function(target, columns_to_remove, test_size) {
@@ -430,10 +439,11 @@ LogisticRegression <- R6Class("LogisticRegression",
     #'
     #' @examples
     #' \dontrun{
-    #' model <- LogisticRegression$new("data/loan_data.csv", ",")
-    #' model$prepare_data(target = "default", columns_to_remove = NULL, test_size = 0.2)
-    #' model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 32, tol = 1e-4)
+    #' # Fit the model with specified hyperparameters
+    #' model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 50, tol = 0.001)
     #' }
+    #' 
+    #' @note The \code{fit} method must be called after preparing the data using the \code{prepare_data} method.
     
     # Fonction fit : Ajustement du modèle
     fit = function(learning_rate, max_iter, batch_size, tol) {
@@ -533,9 +543,11 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' # Calculate variable importance for a fitted model
     #' importance <- model$var_importance()
     #'
-    #' # View the importance of the top 5 variables
-    #' head(importance, 5)
+    #' # View the importance of the variables
+    #' print(importance)
     #' }
+    #' 
+    #' @note The \code{var_importance} method must be called after fitting the model using the \code{fit} method.
 
     # Fonction de calcul de l'importance des variables
     var_importance = function() {
@@ -578,7 +590,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' @param num_vars Integer (default: NULL). The exact number of most important variables to select. If provided, 
     #' the function will select the top `num_vars` based on their importance scores.
     #'
-    #' @return None. The function modifies the `X_train`, `X_test`, and `predictors` attributes of the model instance.
+    #' @return A character vector containing the names of the selected variables.
     #'
     #' @details
     #' This function uses the importance scores of the variables calculated by the `var_importance` function to filter out 
@@ -599,6 +611,8 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' # Select the top 10 most important variables
     #' model$var_select(num_vars = 10)
     #' }
+    #' 
+    #' @note The \code{var_select} method must be called after calculating variable importance using the \code{var_importance} method.
 
     # Fonction de sélection des variables
     var_select = function(threshold = 0.05, num_vars = NULL) {
@@ -638,20 +652,17 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' and predicts the class with the highest probability. The accuracy of the model is then calculated based on the predictions.
     #'
     #' @return The function returns the accuracy of the model on the test data.
-    #'   - `accuracy`: The accuracy of the predictions on the test data.
     #'
     #' @examples
     #' \dontrun{
-    #' # Assuming `model` is an instance of the logistic regression model
+    #' # Make predictions on the test set
     #' accuracy <- model$predict()
-    #' print(accuracy)  # Prints the accuracy of the model on the test data
+    #' 
+    #' # Print the accuracy of the model on the test data
+    #' print(accuracy)
     #' }
-    #'
-    #' @note 
-    #' The model must be fitted before calling this function (i.e., the `fit` method should be run first).
-    #' This function assumes that the model has a `coefficients` attribute, which contains the learned coefficients 
-    #' for the logistic regression model, as well as `X_test` and `y_test` attributes for the test data and true labels, respectively.
-    #'
+    #' 
+    #' @note The \code{predict} method must be called after fitting the model using the \code{fit} method.
     
     # Fonction predict : Prédiction des classes
     predict = function() {
@@ -698,12 +709,12 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' - Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
     #' - Applies the softmax function to convert logits into probabilities.
     #'
-    #' If the model has not been trained and `self$coefficients` are not available, the function will raise an error.
-    #'
     #' @examples
     #' \dontrun{
     #' # Predict probabilities for the test set
     #' probabilities <- model$predict_proba()
+    #' 
+    #' # Print the predicted probabilities
     #' print(probabilities)
     #' }
     
