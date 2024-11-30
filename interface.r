@@ -158,15 +158,16 @@ ui <- fluidPage(
       class = "main-panel",
       verbatimTextOutput("output"),
       verbatimTextOutput("missing_info"),
-      DT::dataTableOutput("data_preview"),
-      DT::dataTableOutput("predictions")
+      uiOutput("data_preview_ui"),
+      uiOutput("confusion_matrix_ui"),
+      uiOutput("predictions_ui")
     )
   )
 )
 
 # Serveur
 server <- function(input, output, session) {
-  rv <- reactiveValues(model = NULL, accuracy = NULL, predictions = NULL, temp_files = character(), trigger = 0)
+  rv <- reactiveValues(model = NULL, accuracy = NULL, confusion_matrix = NULL, predictions = NULL, temp_files = character(), trigger = 0)
   
   observe({
     withProgress(message = 'File import > ', value = 0, {
@@ -195,6 +196,7 @@ server <- function(input, output, session) {
       disable("predict")
       output$missing_info <- renderText(NULL)
       rv$model <- NULL
+      rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       
       # Vérification de l'existence du fichier
@@ -261,6 +263,7 @@ server <- function(input, output, session) {
         disable("fit_model")
         disable("predict")
         rv$model <- NULL
+        rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         
         incProgress(1, detail = "Error")
@@ -294,6 +297,7 @@ server <- function(input, output, session) {
       disable("tol")
       disable("fit_model")
       disable("predict")
+      rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       
       # Vérification de l'existence du fichier
@@ -365,6 +369,7 @@ server <- function(input, output, session) {
         disable("fit_model")
         disable("predict")
         rv$model <- NULL
+        rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         
         output$output <- renderText(paste("[ERROR]", e$message))
@@ -502,6 +507,7 @@ server <- function(input, output, session) {
       disable("tol")
       disable("fit_model")
       disable("predict")
+      rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       
       # Obtention des colonnes à supprimer
@@ -545,6 +551,7 @@ server <- function(input, output, session) {
         disable("tol")
         disable("fit_model")
         disable("predict")
+        rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         
         output$output <- renderText(paste("[ERROR]", e$message))
@@ -561,6 +568,7 @@ server <- function(input, output, session) {
       incProgress(0.2, detail = "Interface updating in progress...")
       
       disable("predict")
+      rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       
       # Récupération des paramètres du modèle
@@ -611,6 +619,7 @@ server <- function(input, output, session) {
       }, error = function(e) {
         # Désactivation de l'interface
         disable("predict")
+        rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         
         output$output <- renderText(paste("[ERROR]", e$message))
@@ -618,30 +627,101 @@ server <- function(input, output, session) {
       })
     })
   })
-  
+
   # Prédiction des classes
   observeEvent(input$predict, {
     withProgress(message = 'Predicting classes > ', value = 0, {
       incProgress(0.5, detail = "Prediction in progress...")
       tryCatch({
-        # Prédiction des classes et récupération de l'accuracy
+        # Exécuter la prédiction et obtenir l'accuracy
         accuracy <- rv$model$predict()
-        output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), " %."))
-        rv$predictions <- rv$model$predictions_to_labels()
         rv$accuracy <- accuracy
+        
+        # Récupérer les prédictions et les vraies classes
+        predictions <- rv$model$predicted_targets  # Assurez-vous que cette méthode retourne les prédictions
+        actual <- rv$model$y_test  # Assurez-vous que y_test est accessible
+        
+        # Créer une table avec les classes réelles et prédite
+        rv$predictions <- data.frame(
+          Real_class = actual,
+          Predicted_class = predictions
+        )
+        
+        # Calculer la matrice de confusion
+        confusion_mat <- table(rv$predictions$Real_class, rv$predictions$Predicted_class)
+        rv$confusion_matrix <- confusion_mat
+        
+        # Mettre à jour les affichages
+        output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), "%."))
+        
+        # Activer le bouton de prédiction si nécessaire
+        enable("predict")
+        
         incProgress(1, detail = "Success")
       }, error = function(e) {
+        # Gestion des erreurs
         output$output <- renderText(paste("[ERROR]", e$message))
         rv$predictions <- NULL
-        rv$accuracy <- NULL
+        rv$confusion_matrix <- NULL
+        rv$predictions <- NULL
         incProgress(1, detail = "Error")
       })
     })
   })
   
+  # # Prédiction des classes
+  # observeEvent(input$predict, {
+  #   withProgress(message = 'Predicting classes > ', value = 0, {
+  #     incProgress(0.5, detail = "Prediction in progress...")
+  #     tryCatch({
+  #       # Prédiction des classes et récupération de l'accuracy
+  #       accuracy <- rv$model$predict()
+  #       output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), " %."))
+  #       rv$predictions <- rv$model$predictions_to_labels()
+  #       rv$accuracy <- accuracy
+  #       incProgress(1, detail = "Success")
+  #     }, error = function(e) {
+  #       output$output <- renderText(paste("[ERROR]", e$message))
+  #       rv$confusion_matrix <- NULL
+  #       rv$predictions <- NULL
+  #       rv$accuracy <- NULL
+  #       incProgress(1, detail = "Error")
+  #     })
+  #   })
+  # })
+
+  # UI pour l'aperçu des données
+  output$data_preview_ui <- renderUI({
+    req(rv$model)
+    tagList(
+      h3("Data preview"),
+      hr(),
+      DT::dataTableOutput("data_preview")
+    )
+  })
+  
+  # UI pour la matrice de confusion
+  output$confusion_matrix_ui <- renderUI({
+    req(rv$confusion_matrix)
+    tagList(
+      h3("Confusion matrix"),
+      hr(),
+      DT::dataTableOutput("confusion_matrix")
+    )
+  })
+  
+  # UI pour les prédictions détaillées
+  output$predictions_ui <- renderUI({
+    req(rv$predictions)
+    tagList(
+      h3("Predictions"),
+      hr(),
+      DT::dataTableOutput("predictions")
+    )
+  })
+  
   # Affichage des données
   output$data_preview <- DT::renderDataTable({
-    req(rv$model)
     rv$trigger
     rv$model$data
   }, options = list(
@@ -650,13 +730,21 @@ server <- function(input, output, session) {
     autoWidth = TRUE,
     scrollX = TRUE
   ))
+
+  # Afficher la matrice de confusion
+  output$confusion_matrix <- DT::renderDataTable({
+    as.data.frame.matrix(rv$confusion_matrix)
+  }, options = list(
+    paging = FALSE,
+    searching = FALSE,
+    info = FALSE,
+    ordering = FALSE
+  ))
   
-  # Affichage des prédictions
+  # Afficher la table des prédictions détaillées
   output$predictions <- DT::renderDataTable({
-    req(rv$predictions)
     rv$predictions
   }, options = list(
-    server = TRUE,
     pageLength = 10,
     autoWidth = TRUE,
     scrollX = TRUE
