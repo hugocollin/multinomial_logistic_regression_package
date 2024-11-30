@@ -532,6 +532,8 @@ server <- function(input, output, session) {
         enable("batch_size")
         enable("tol")
         enable("fit_model")
+
+        rv$trigger <- rv$trigger + 1
         
         output$output <- renderText("[INFO] The data has been successfully prepared.")
         incProgress(1, detail = "Success")

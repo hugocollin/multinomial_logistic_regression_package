@@ -229,8 +229,6 @@ model$print()
 
 \item{\code{predictors}}{Character vector containing the names of predictor variables used for the model.}
 
-\item{\code{prepared_data}}{List containing the processed data after preparation (encoding, normalization, etc.).}
-
 \item{\code{X}}{Matrix of predictor variables used for model training.}
 
 \item{\code{y}}{Vector of target variable labels corresponding to the observations.}

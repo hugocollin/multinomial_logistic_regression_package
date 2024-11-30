@@ -49,9 +49,6 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' @field predictors Character vector containing the names of predictor variables used for the model.
     predictors = NULL,
     
-    #' @field prepared_data List containing the processed data after preparation (encoding, normalization, etc.).
-    prepared_data = NULL,
-    
     #' @field X Matrix of predictor variables used for model training.
     X = NULL,
     
@@ -426,7 +423,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       X_test <- X[-indices, ]
       y_test <- y[-indices]
       
-      self$prepared_data <- data
+      self$data <- data
       self$X <- X
       self$y <- y
       self$n <- n
