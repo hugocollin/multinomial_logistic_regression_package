@@ -47,7 +47,7 @@ _To run the UI package, make sure you have R installed on your machine._
 To use the package, you can use the following commands :
 
 ```R
-library(mlr)
+library(sisemlr)
 ```
 
 You can ask for help using the following command :
