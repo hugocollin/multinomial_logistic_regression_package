@@ -12,7 +12,7 @@ library(roxygen2)
 #' \describe{
 #'   \item{\code{initialize(file_path, delimiter)}}{Initializes the model with data from a CSV or Excel file.}
 #'   \item{\code{handle_missing_values(num_method, cat_method)}}{Handles missing values in the dataset.}
-#'   \item{\code{auto_select_target(entropy_threshold, correlation_threshold, weight_entropy, weight_correlation)}}{Automatically selects the target variable based on entropy and correlation thresholds.}
+#'   \item{\code{target_select(entropy_threshold, correlation_threshold, weight_entropy, weight_correlation)}}{Automatically selects the target variable based on entropy and correlation thresholds.}
 #'   \item{\code{auto_remove_columns(correlation_threshold)}}{Automatically removes columns with high correlation.}
 #'   \item{\code{prepare_data(target, columns_to_remove, test_size)}}{Prepares the data for training by defining predictors and splitting into training and testing sets.}
 #'   \item{\code{fit(learning_rate, max_iter, batch_size, tol)}}{Fits the logistic regression model using gradient descent.}
@@ -35,7 +35,7 @@ library(roxygen2)
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
   private = list(
-    state = "initialized"
+    state = 0
   ),
   public = list(
     #' @field data Data frame containing the raw data loaded from the specified file.
@@ -191,7 +191,7 @@ LogisticRegression <- R6Class("LogisticRegression",
 
     # Fonction de gestion des valeurs manquantes
     handle_missing_values = function(num_method = c("none", "mean", "median", "mode", "remove"), cat_method = c("none", "mode", "remove")) {
-      if (private$state != "initialized") {
+      if (private$state < 0) {
         stop("[WARNING] You must initialize the model by calling the `new` method before handling missing values.")
       }
 
@@ -251,14 +251,14 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' @examples
     #' \dontrun{
     #' # Automatically select target with specified thresholds
-    #' model$auto_select_target(entropy_threshold = 0.5, correlation_threshold = 0.3, 
+    #' model$target_select(entropy_threshold = 0.5, correlation_threshold = 0.3, 
     #'                         weight_entropy = 0.7, weight_correlation = 0.3)
     #' }
 
     # Fonction de sélection automatique de la variable cible
-    auto_select_target = function(entropy_threshold = 0.5, correlation_threshold = 0.5, weight_entropy = 0.5, weight_correlation = 0.5) {
-      if (private$state != "initialized") {
-        stop("[WARNING] You must initialize the model by calling the `new` method before handling missing values.")
+    target_select = function(entropy_threshold = 0.5, correlation_threshold = 0.5, weight_entropy = 0.5, weight_correlation = 0.5) {
+      if (private$state < 0) {
+        stop("[WARNING] You must initialize the model by calling the `new` method before asking for automatic target selection.")
       }
 
       # Récupération des données
@@ -316,50 +316,6 @@ LogisticRegression <- R6Class("LogisticRegression",
       return(best_target)
     },
 
-    #' Automatically remove unnecessary columns
-    #'
-    #' Automatically removes columns with high correlation based on the specified threshold. This function can be very slow for large datasets.
-    #'
-    #' @param correlation_threshold Numeric. Threshold for average Cramér's V correlation to consider a column for removal (default is 0.9).
-    #'
-    #' @return A character vector of column names to remove or \code{NULL} if no columns meet the criteria.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Remove columns with average correlation above 0.9
-    #' columns_removed <- model$auto_remove_columns(correlation_threshold = 0.9)
-    #' }
-
-    # Fonction de suppression automatique des colonnes inutiles
-    auto_remove_columns = function(correlation_threshold = 0.9) {
-      data <- self$data
-      cols_names <- self$cols_names
-
-      # Calcul de la corrélation de Cramer de manière vectorisée
-      cramers_v_matrix <- outer(cols_names, cols_names, Vectorize(function(x, y) {
-        if(x == y) {
-          return(1)
-        } else {
-          return(cramers_v(data[[x]], data[[y]]))
-        }
-      }))
-
-      # Ajustement des valeurs diagonales
-      diag(cramers_v_matrix) <- 1
-
-      # Moyenne des corrélations pour chaque colonne
-      mean_correlations <- rowMeans(cramers_v_matrix, na.rm = TRUE)
-
-      # Identification des colonnes à supprimer
-      columns_to_remove <- cols_names[abs(mean_correlations) > correlation_threshold]
-
-      if (length(columns_to_remove) == 0) {
-        return(NULL)
-      } else {
-        return(columns_to_remove)
-      }
-    },
-
     #' Prepare data for modeling
     #'
     #' Prepares the dataset by defining the target variable, removing specified columns, encoding categorical variables, normalizing numerical variables, and splitting the data into training and testing sets.
@@ -377,8 +333,8 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     # Fonction de préparation des données
     prepare_data = function(target, columns_to_remove, test_size) {
-      if (private$state != "initialized") {
-        stop("[WARNING] You must initialize the model by calling the `new` method before handling missing values.")
+      if (private$state < 0) {
+        stop("[WARNING] You must initialize the model by calling the `new` method before preparing the data.")
       }
 
       # Récupération des données
@@ -458,7 +414,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$y_test <- y_test
 
       # Mise à jour de l'état
-      private$state <- "data_prepared"
+      private$state <- 1
     },
 
     #' Fit the Logistic Regression Model
@@ -481,7 +437,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     # Fonction fit : Ajustement du modèle
     fit = function(learning_rate, max_iter, batch_size, tol) {
-      if (private$state != "data_prepared") {
+      if (private$state < 1) {
         stop("[WARNING] You must prepare the data before fitting the model by calling the `prepare_data` method.")
       }
 
@@ -556,7 +512,123 @@ LogisticRegression <- R6Class("LogisticRegression",
       self$coefficients <- coefficients
 
       # Mise à jour de l'état
-      private$state <- "model_fitted"
+      private$state <- 2
+    },
+
+    #' Calculate variable importance for Logistic Regression Model
+    #'
+    #' Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
+    #'
+    #' @return A data frame with two columns:
+    #' - \code{Variable}: The name of each predictor variable.
+    #' - \code{Importance}: The normalized importance score for each variable.
+    #'
+    #' @details
+    #' This function calculates the importance of each predictor variable by taking the absolute values of the coefficients (excluding the intercept). 
+    #' The sum of these absolute values for each variable is used as a measure of importance. Optionally, the scores are normalized by dividing by the total sum of importance scores.
+    #' The variables are then sorted in descending order of importance.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Calculate variable importance for a fitted model
+    #' importance <- model$var_importance()
+    #'
+    #' # View the importance of the top 5 variables
+    #' head(importance, 5)
+    #' }
+
+    # Fonction de calcul de l'importance des variables
+    var_importance = function() {
+      if (private$state < 2) {
+        stop("[WARNING] You must fit the model before calculating variable importance by calling the `fit` method.")
+      }
+      
+      # Extraire les coefficients sans l'intercept (1ère colonne)
+      coef_matrix <- self$coefficients[-1, ]
+      
+      # Calcul des scores d'importance
+      importance_scores <- apply(abs(coef_matrix), 1, sum)
+      
+      # Normalisation des scores (optionnelle)
+      importance_scores <- importance_scores / sum(importance_scores)
+      
+      # Associer les scores aux noms des variables
+      variable_names <- colnames(self$X_train)
+      importance <- data.frame(
+        Variable = variable_names,
+        Importance = importance_scores
+      )
+      
+      # Trier par ordre décroissant d'importance
+      importance <- importance[order(-importance$Importance), ]
+
+      # Mise à jour de l'état
+      private$state <- 3
+      
+      return(importance)
+    },
+    
+    #' Variable selection based on importance or threshold
+    #'
+    #' Selects variables (predictors) for the logistic regression model based on their importance scores or a specified threshold. 
+    #' This helps in reducing the model complexity by keeping only the most important predictors.
+    #'
+    #' @param threshold Numeric value (default: 0.05). The minimum importance score a variable must have to be selected. 
+    #' If `num_vars` is provided, this argument is ignored.
+    #' @param num_vars Integer (default: NULL). The exact number of most important variables to select. If provided, 
+    #' the function will select the top `num_vars` based on their importance scores.
+    #'
+    #' @return None. The function modifies the `X_train`, `X_test`, and `predictors` attributes of the model instance.
+    #'
+    #' @details
+    #' This function uses the importance scores of the variables calculated by the `var_importance` function to filter out 
+    #' less important variables. The selection can either be based on a minimum importance threshold or by selecting a fixed 
+    #' number of top variables.
+    #'
+    #' - If `num_vars` is specified, the function selects the top `num_vars` variables based on their importance score.
+    #' - If `threshold` is provided, the function selects variables whose importance is greater than or equal to the threshold.
+    #'
+    #' After selecting the variables, it reduces the `X_train` and `X_test` datasets to the selected variables and updates the 
+    #' `predictors` attribute.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Select variables based on importance threshold
+    #' model$var_select(threshold = 0.05)
+    #'
+    #' # Select the top 10 most important variables
+    #' model$var_select(num_vars = 10)
+    #' }
+
+    # Fonction de sélection des variables
+    var_select = function(threshold = 0.05, num_vars = NULL) {
+      if (private$state < 3) {
+        stop("[WARNING] You must calculate variable importance before selecting variables by calling the `var_importance` method.")
+      }
+
+      # Calculer l'importance des variables
+      importance <- self$var_importance()
+      
+      # Filtrer les variables en fonction du seuil
+      if (!is.null(num_vars)) {
+        # Conserver uniquement les 'num_vars' variables les plus importantes
+        selected_variables <- head(importance$Variable, n = num_vars)
+      } else {
+        # Conserver les variables dont l'importance est >= au seuil
+        selected_variables <- importance$Variable[importance$Importance >= threshold]
+      }
+      
+      # Réduire les données aux variables sélectionnées
+      self$X_train <- self$X_train[, selected_variables, drop = FALSE]
+      self$X_test <- self$X_test[, selected_variables, drop = FALSE]
+      
+      # Mettre à jour les prédicteurs de la classe
+      self$predictors <- selected_variables
+      
+      cat("[Info] Variables selected based on importance:\n")
+      print(selected_variables)
+
+      return(selected_variables)
     },
     
     #' Predict function for Logistic Regression Model
@@ -583,7 +655,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     
     # Fonction predict : Prédiction des classes
     predict = function() {
-      if (private$state != "model_fitted") {
+      if (private$state < 2) {
         stop("[WARNING] You must fit the model before making predictions by calling the `fit` method.")
       }
 
@@ -608,7 +680,8 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Calcul de la performance
       self.accuracy <- mean(predicted_classes == self$y_test)
 
-      private$state <- "predicted"
+      # Mise à jour de l'état
+      private$state <- 4
       
       return(self.accuracy)
     },
@@ -651,109 +724,6 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       # Retourner les probabilités pour chaque classe
       return(softmax_probs)
-    },
-    
-    #' Calculate variable importance for Logistic Regression Model
-    #'
-    #' Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
-    #'
-    #' @return A data frame with two columns:
-    #' - \code{Variable}: The name of each predictor variable.
-    #' - \code{Importance}: The normalized importance score for each variable.
-    #'
-    #' @details
-    #' This function calculates the importance of each predictor variable by taking the absolute values of the coefficients (excluding the intercept). 
-    #' The sum of these absolute values for each variable is used as a measure of importance. Optionally, the scores are normalized by dividing by the total sum of importance scores.
-    #' The variables are then sorted in descending order of importance.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Calculate variable importance for a fitted model
-    #' importance <- model$variable_importance()
-    #'
-    #' # View the importance of the top 5 variables
-    #' head(importance, 5)
-    #' }
-
-    # Fonction de calcul de l'importance des variables
-    variable_importance = function() {
-      # Extraire les coefficients sans l'intercept (1ère colonne)
-      coef_matrix <- self$coefficients[-1, ]
-      
-      # Calcul des scores d'importance
-      importance_scores <- apply(abs(coef_matrix), 1, sum)
-      
-      # Normalisation des scores (optionnelle)
-      importance_scores <- importance_scores / sum(importance_scores)
-      
-      # Associer les scores aux noms des variables
-      variable_names <- colnames(self$X_train)
-      importance <- data.frame(
-        Variable = variable_names,
-        Importance = importance_scores
-      )
-      
-      # Trier par ordre décroissant d'importance
-      importance <- importance[order(-importance$Importance), ]
-      
-      return(importance)
-    },
-    
-    #' Variable selection based on importance or threshold
-    #'
-    #' Selects variables (predictors) for the logistic regression model based on their importance scores or a specified threshold. 
-    #' This helps in reducing the model complexity by keeping only the most important predictors.
-    #'
-    #' @param threshold Numeric value (default: 0.05). The minimum importance score a variable must have to be selected. 
-    #' If `num_vars` is provided, this argument is ignored.
-    #' @param num_vars Integer (default: NULL). The exact number of most important variables to select. If provided, 
-    #' the function will select the top `num_vars` based on their importance scores.
-    #'
-    #' @return None. The function modifies the `X_train`, `X_test`, and `predictors` attributes of the model instance.
-    #'
-    #' @details
-    #' This function uses the importance scores of the variables calculated by the `variable_importance` function to filter out 
-    #' less important variables. The selection can either be based on a minimum importance threshold or by selecting a fixed 
-    #' number of top variables.
-    #'
-    #' - If `num_vars` is specified, the function selects the top `num_vars` variables based on their importance score.
-    #' - If `threshold` is provided, the function selects variables whose importance is greater than or equal to the threshold.
-    #'
-    #' After selecting the variables, it reduces the `X_train` and `X_test` datasets to the selected variables and updates the 
-    #' `predictors` attribute.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Select variables based on importance threshold
-    #' model$var_select(threshold = 0.05)
-    #'
-    #' # Select the top 10 most important variables
-    #' model$var_select(num_vars = 10)
-    #' }
-
-    # Fonction de sélection des variables
-    var_select = function(threshold = 0.05, num_vars = NULL) {
-      # Calculer l'importance des variables
-      importance <- self$variable_importance()
-      
-      # Filtrer les variables en fonction du seuil
-      if (!is.null(num_vars)) {
-        # Conserver uniquement les 'num_vars' variables les plus importantes
-        selected_variables <- head(importance$Variable, n = num_vars)
-      } else {
-        # Conserver les variables dont l'importance est >= au seuil
-        selected_variables <- importance$Variable[importance$Importance >= threshold]
-      }
-      
-      # Réduire les données aux variables sélectionnées
-      self$X_train <- self$X_train[, selected_variables, drop = FALSE]
-      self$X_test <- self$X_test[, selected_variables, drop = FALSE]
-      
-      # Mettre à jour les prédicteurs de la classe
-      self$predictors <- selected_variables
-      
-      cat("[Info] Variables selected based on importance:\n")
-      print(selected_variables)
     },
 
     #' Convert actual class indices to class labels

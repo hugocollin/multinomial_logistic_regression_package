@@ -95,7 +95,7 @@ ui <- fluidPage(
             label = NULL,
             choices = NULL
           )),
-          disabled(checkboxInput("auto_delete_cols", "Auto delete columns (can be very slow for large datasets)", value = FALSE)),
+          disabled(checkboxInput("auto_delete_cols", "Auto delete columns (only possible after fitting the model)", value = FALSE)),
           p("Columns to remove (optional)"),
           disabled(selectInput(
             "remove_cols",
@@ -321,7 +321,7 @@ server <- function(input, output, session) {
         updateSelectInput(session, "target", choices = cat_cols_names)
         
         # Calcul de la meilleure variable cible
-        best_target <- rv$model$auto_select_target()
+        best_target <- rv$model$target_select()
         
         # Sélection automatique de la variable cible
         updateSelectInput(session, "target", selected = best_target)
@@ -345,7 +345,6 @@ server <- function(input, output, session) {
         enable("handle_missing_cat_method")
         enable("handle_missing")
         enable("auto_target")
-        enable("auto_delete_cols")
         enable("remove_cols")
         enable("test_size")
         enable("prepare_data")
@@ -445,7 +444,7 @@ server <- function(input, output, session) {
       disable("target")
       
       # Calcul de la meilleure variable cible
-      best_target <- rv$model$auto_select_target()
+      best_target <- rv$model$target_select()
       
       # Sélection automatique de la variable cible
       updateSelectInput(session, "target", selected = best_target)
@@ -468,10 +467,8 @@ server <- function(input, output, session) {
       withProgress(message = 'Auto column suppression > ', value = 0, {
         disable("remove_cols")
         
-        # Calcul des colonnes à supprimer
-        incProgress(0.5, detail = "Calculating columns to be removed in progress...")
-        
-        cols_to_remove <- rv$model$auto_remove_columns()
+        # Sélection des colonnes à supprimer
+        cols_to_remove <- rv$model$var_select()
         
         # Sélection automatique des colonnes à supprimer
         incProgress(0.2, detail = "Auto selection of columns to be removed in progress...")
@@ -488,8 +485,6 @@ server <- function(input, output, session) {
       })
     } else {
       enable("remove_cols")
-      
-      output$output <- renderText("[INFO] Please select the columns to remove.")
     }
     
   })
@@ -565,14 +560,14 @@ server <- function(input, output, session) {
     withProgress(message = 'Model fitting > ', value = 0, {
       
       # Réinitialisation de l'interface
-      incProgress(0.2, detail = "Interface updating in progress...")
+      incProgress(0.1, detail = "Interface updating in progress...")
       
       disable("predict")
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       
       # Récupération des paramètres du modèle
-      incProgress(0.2, detail = "Retrieving model parameters in progress...")
+      incProgress(0.1, detail = "Retrieving model parameters in progress...")
       
       learning_rate <- input$learning_rate
       max_iter <- input$max_iter
@@ -610,8 +605,14 @@ server <- function(input, output, session) {
       incProgress(0.2, detail = "Model fitting in progress...")
       tryCatch({
         rv$model$fit(learning_rate = learning_rate, max_iter = max_iter, batch_size = batch_size, tol = tol)
+
+        # Calcul de l'importance des variables
+        incProgress(0.2, detail = "Variable importance calculation in progress...")
         
-        # Activation du bouton prédiction
+        rv$model$var_importance()
+        
+        # Activation de l'inteface
+        enable("auto_delete_cols")
         enable("predict")
         
         output$output <- renderText("[INFO] The model has been successfully fitted.")
