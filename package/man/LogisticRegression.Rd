@@ -33,6 +33,9 @@ Maps numeric class indices from the predicted outputs to their corresponding cla
 }
 
 \examples{
+# Example usage
+# model <- LogisticRegression$new("data.csv", ",")
+
 
 ## ------------------------------------------------
 ## Method `LogisticRegression$new`

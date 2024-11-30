@@ -24,6 +24,13 @@ library(roxygen2)
 #'
 #' @docType class
 #' @import R6 readr readxl
+#' @export
+#'
+#' @examples
+#' # Example usage
+#' # model <- LogisticRegression$new("data.csv", ",")
+#'
+#' @name LogisticRegression
 
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
