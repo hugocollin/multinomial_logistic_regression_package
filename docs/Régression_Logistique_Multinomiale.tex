@@ -1,0 +1,606 @@
+\documentclass{rapport}
+
+%----------- Informations du rapport ---------
+
+
+\begin{document}
+\titre{ Développement d’un Package R pour la Régression Logistique Multinomiale Stochastique}
+\UE{MASTER 2 SISE} %Nom de la UE
+\enseignant{Ricco \textsc{RAKOTOMALALA}} %Nom de l'enseignant
+
+\eleves{Hugo \textsc{COLLIN} \\
+		Falonne \textsc{KPAMEGAN} \\ 
+		Lucile \textsc{PERBET} } %Nom des élèves
+
+%----------- Initialisation -------------------
+        
+\fairemarges %Afficher les marges
+\fairepagedegarde %Créer la page de garde
+\tabledematieres %Créer la table de matières
+
+%------------ Corps du rapport ----------------
+
+\addcontentsline{toc}{section}{Introduction} 
+\markboth{Introduction}{}
+\section*{Introduction}
+
+Ce projet a été réalisé dans le cadre d'un travail académique visant à développer et évaluer un modèle de régression logistique multinomiale stochastique pour la classification de données multiclasse. Le modèle, implémenté à l'aide du langage R, repose sur des techniques avancées de machine learning et a été intégré dans une application interactive avec Shiny, permettant une manipulation facile des données et une visualisation claire des résultats.
+
+Dans ce rapport, nous présentons d'abord le contexte et les objectifs du projet, suivis de la description technique du modèle développé. Les différentes étapes, y compris le prétraitement des données, l'optimisation du modèle, et les tests de performance, sont ensuite détaillées. Enfin, nous comparons les résultats obtenus avec notre modèle et ceux d'autres implémentations existantes sur des jeux de données standards, dans le but de démontrer l'efficacité et la pertinence de notre approche.
+
+
+\section{Vue d'ensemble du programme}
+L'architecture du programme repose sur plusieurs étapes clés. Dans un premier temps, les données sont préparées grâce à des fonctions intégrées qui automatisent des opérations essentielles comme le partitionnement en ensembles d’entraînement et de test, l’encodage one-hot, et la gestion des variables numériques. Ensuite, le modèle ajuste ses paramètres grâce à une descente de gradient stochastique optimisée pour minimiser une fonction de coût basée sur la log-vraisemblance négative. Une fois le modèle entraîné, les fonctions prédictives permettent d’obtenir à la fois les classes prédites et les probabilités associées.
+
+Une particularité notable de ce programme est l’utilisation d’une gestion interne des jeux de données d’entraînement et de test (X\_train, X\_test, y\_train, y\_test), rendant l’utilisation des fonctions comme fit, predict, ou predict\_proba beaucoup plus intuitive. L’utilisateur n’a pas besoin de spécifier explicitement ces jeux de données à chaque appel, contrairement à des outils comme scikit-learn. Cette approche favorise une prise en main rapide tout en réduisant la complexité opérationnelle.
+
+Le programme inclut également des outils d’évaluation comme la matrice de confusion, la précision, le rappel, et le F1-score, ainsi qu’une analyse de l’importance des variables. Ces fonctionnalités permettent une interprétation approfondie des résultats et une validation rigoureuse des performances du modèle. Enfin, l’application Shiny associée offre une interface interactive pour explorer les données, ajuster les paramètres du modèle, et visualiser les résultats de manière conviviale.
+
+Ce projet se distingue par son équilibre entre une implémentation rigoureuse des algorithmes et une expérience utilisateur simplifiée, répondant ainsi aux besoins à la fois pédagogiques et analytiques.
+
+\subsection{Architecture du projet}
+Le dossier principal est composé de trois dossiers: \texttt{data}, \texttt{docs} et \texttt{package} et d'un fichier R \texttt{interface.r}. Le dossier \texttt{data} contient quelques jeu de données pour tester notre package. Le package proprement dit se trouve dans le dossier \texttt{package} composé des dossiers \texttt{man} pour la documentation et \texttt{R} qui contient le modèle de regression logistique
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth, height=0.5\textwidth]{images/architecture.png}
+    \caption{Architecture du projet}
+    \label{fig:architecture}
+\end{figure}
+
+
+
+\section{Regression Logistique multinomiale stochastique}
+
+
+\subsection{Fonction \texttt{handle\_missing\_values}}
+
+Elle permet de traiter les valeurs manquantes dans le jeu de données en fonction des méthodes spécifiées pour les variables numériques et catégorielles.
+\paragraph{Détails des étapes:}
+\begin{itemize}
+    \item \textbf{Vérification de l'état du modèle} : 
+    La fonction commence par vérifier que le modèle a bien été initialisé. Si ce n'est pas le cas, un message d'erreur est renvoyé.
+    
+    \item \textbf{Vérification des arguments} : 
+    Les arguments \texttt{num\_method} et \texttt{cat\_method} sont validés à l'aide de \texttt{match.arg}, afin de s'assurer que l'utilisateur a choisi une méthode valide parmi les options proposées (par exemple, "mean", "median", "mode", etc.).
+    
+    \item \textbf{Gestion des valeurs manquantes pour les variables numériques} : 
+    La fonction vérifie chaque variable numérique et applique la méthode spécifiée par l'utilisateur pour gérer les valeurs manquantes. Les options disponibles sont :
+    \begin{itemize}
+        \item \texttt{"none"} : ne rien faire,
+        \item \texttt{"mean"} : remplacer les valeurs manquantes par la moyenne,
+        \item \texttt{"median"} : remplacer les valeurs manquantes par la médiane,
+        \item \texttt{"mode"} : remplacer les valeurs manquantes par la valeur la plus fréquente,
+        \item \texttt{"remove"} : supprimer les lignes contenant des valeurs manquantes.
+    \end{itemize}
+    
+    \item \textbf{Gestion des valeurs manquantes pour les variables catégorielles} : 
+    De même, pour les variables catégorielles, les méthodes suivantes sont proposées pour gérer les valeurs manquantes :
+    \begin{itemize}
+        \item \texttt{"none"} : ne rien faire,
+        \item \texttt{"mode"} : remplacer les valeurs manquantes par la modalité la plus fréquente,
+        \item \texttt{"remove"} : supprimer les lignes contenant des valeurs manquantes.
+    \end{itemize}
+    
+    \item \textbf{Calcul du nombre de valeurs manquantes} : 
+    Après avoir traité les valeurs manquantes, la fonction calcule le nombre total de valeurs manquantes ainsi que le pourcentage de ces valeurs par rapport au jeu de données complet. Ces informations sont stockées dans les attributs \texttt{missing\_values} et \texttt{missing\_values\_percent}.
+    
+    \item \textbf{Mise à jour des données} : 
+    Les données traitées sont stockées dans l'objet du modèle, prêtes pour les étapes suivantes de l'analyse ou de l'entraînement du modèle.
+\end{itemize}
+
+\noindent
+La fonction \texttt{handle\_missing\_values} est essentielle pour garantir que les données utilisées par le modèle ne contiennent pas de valeurs manquantes, ce qui pourrait entraîner des erreurs ou de mauvaises performances du modèle.
+
+
+\subsection{Fonction \texttt{prepare\_data}}
+
+La fonction \texttt{prepare\_data} est responsable du prétraitement des données, ce qui inclut la gestion des colonnes à supprimer, l'encodage des variables catégoriques, la normalisation des variables numériques, et la séparation des données en ensembles d'entraînement et de test. Elle permet de s'assurer que toutes les variables sont prêtes et normalisées pour l'apprentissage.
+
+\paragraph{Détails des étapes:}
+
+\begin{itemize}
+    \item \textbf{Vérification de l'état du modèle} : 
+    La fonction commence par vérifier que le modèle a bien été initialisé. Si ce n'est pas le cas, un message d'erreur est renvoyé.
+    
+    \item \textbf{Sélection des colonnes} : 
+    La fonction récupère les colonnes de prédiction en excluant la colonne cible et les colonnes spécifiées pour suppression. Un contrôle est effectué pour s'assurer que la colonne cible n'est pas incluse dans les colonnes à supprimer.
+    
+    \item \textbf{Encodage de la variable cible} : 
+    Si la variable cible (\texttt{target}) n'est pas déjà un facteur, elle est convertie en facteur. 
+    
+    \item \textbf{Encodage des variables catégoriques} : 
+    Pour chaque variable catégorique (facteur ou caractère), un encodage one-hot est appliqué. Cela crée une nouvelle colonne binaire pour chaque niveau de la variable. Les anciennes colonnes catégoriques sont ensuite supprimées.
+    
+    \item \textbf{Normalisation des variables numériques} : 
+    Les variables numériques sont normalisées (centrées et réduites) à l'aide de la fonction \texttt{scale}, ce qui garantit que toutes les variables ont une échelle comparable.
+    
+    \item \textbf{Séparation des données en ensembles d'entraînement et de test} : 
+    Les données sont séparées de manière aléatoire en deux ensembles : un ensemble d'entraînement et un ensemble de test, en fonction du paramètre \texttt{test\_size}. 
+    
+    \item \textbf{Stockage des données préparées} : 
+    Les matrices de données (\texttt{X}, \texttt{y}, \texttt{X\_train}, \texttt{y\_train}, \texttt{X\_test}, \texttt{y\_test}) sont stockées dans l'objet du modèle pour être utilisées lors de l'entraînement.
+    
+    \item \textbf{Mise à jour de l'état du modèle} : 
+    Après la préparation des données, l'état du modèle est mis à jour pour indiquer que les données sont prêtes à être utilisées pour l'entraînement.
+\end{itemize}
+
+
+\subsection{Fonction \texttt{fit}}
+La méthode fit implémente l'entraînement d'un modèle de régression logistique multinomiale en utilisant une descente de gradient stochastique (SGD). L'objectif est de minimiser la fonction coût en utlisant la log-vraisemblance négative.
+
+\subsubsection{Probabilités}
+Dans le cadre de la régression logistique multinomiale, le \textbf{logit} est utilisé pour modéliser la probabilité qu'une observation appartienne à une classe particulière parmi $K$ classes possibles. Pour une observation donnée $\mathbf{x}_i$, le logit pour la classe $k$ est défini comme une combinaison linéaire des prédicteurs pondérés par un vecteur de coefficients spécifique à la classe :
+
+\[
+z_{i,k} = \mathbf{w}_k^\top \mathbf{x}_i,
+\]
+
+où $\mathbf{w}_k$ est le vecteur des poids associés à la classe $k$, et $\mathbf{x}_i$ est le vecteur des caractéristiques (ou prédicteurs) pour l’observation $i$. Le logit $z_{i,k}$ représente une mesure non normalisée de l’association entre les prédicteurs et la classe $k$. Ces logits servent ensuite à calculer les probabilités prédites via une fonction softmax, garantissant que les probabilités pour toutes les classes $k = 1, \ldots, K$ soient positives et se somment à 1.
+
+
+ 
+Les probabilités prédictives pour chaque classe k sont obtenues via la fonction softmax:
+\[
+P(y_i = k | \mathbf{x}_i) = \frac{\exp(z_{i,k})}{\sum_{j=1}^K \exp(z_{i,j})}
+\]
+
+\subsubsection{Fonction de coût : log-vraisemblance négative}
+
+La fonction de coût utilisée dans la régression logistique multinomiale est la log-vraisemblance négative, qui mesure l'écart entre les probabilités prédites et les observations réelles. Elle est définie comme suit :
+
+\[
+\mathcal{L}(\mathbf{W}) = - \frac{1}{N} \sum_{i=1}^N \sum_{k=1}^K y_{i,k} \log P(y_i = k | \mathbf{x}_i, \mathbf{W}),
+\]
+
+où $N$ est le nombre total d'observations, $K$ le nombre de classes, $y_{i,k}$ est une variable indicatrice prenant la valeur $1$ si l'observation $i$ appartient à la classe $k$, et $P(y_i = k | \mathbf{x}_i, \mathbf{W})$ est la probabilité prédite que l'observation $i$ appartienne à la classe $k$, calculée via la fonction softmax. Cette fonction de coût pénalise fortement les prédictions incorrectes en attribuant un poids élevé aux écarts pour des classes effectivement observées. L’objectif de l’apprentissage consiste à minimiser $\mathcal{L}(\mathbf{W})$ afin d’optimiser les paramètres $\mathbf{W}$ du modèle.
+
+
+\subsubsection{Optimisation par descente de gradient stochastique (SGD)}
+
+L’optimisation des paramètres du modèle de régression logistique multinomiale repose sur la méthode de la descente de gradient stochastique (SGD). Cette méthode permet de minimiser la fonction de coût en mettant à jour les poids $\mathbf{w}_k$ associés à chaque classe $k$ dans la direction opposée au gradient de la log-vraisemblance négative. Le gradient pour un poids $\mathbf{w}_k$ s’exprime comme suit :
+
+\[
+\frac{\partial \mathcal{L}}{\partial \mathbf{w}_k} = \frac{1}{N} \sum_{i=1}^N \big( P(y_i = k | \mathbf{x}_i) - y_{i,k} \big) \mathbf{x}_i,
+\]
+
+où $P(y_i = k | \mathbf{x}_i)$ est la probabilité prédite pour la classe $k$, et $y_{i,k}$ est une variable indicatrice valant $1$ si l'observation $i$ appartient à la classe $k$, sinon $0$. La mise à jour des poids s'effectue selon la règle suivante :
+
+\[
+\mathbf{w}_k \leftarrow \mathbf{w}_k - \eta \frac{\partial \mathcal{L}}{\partial \mathbf{w}_k},
+\]
+
+où $\eta$ représente le taux d’apprentissage. L’utilisation du SGD permet une mise à jour progressive des poids après évaluation sur un petit lot (ou une seule observation), rendant l’algorithme adapté aux grands ensembles de données.
+
+
+\subsubsection{Traitement par lots (batch) et seuil de tolérance}
+
+Dans notre implémentation de la descente de gradient stochastique (SGD), nous utilisons un traitement par \textbf{batch}, qui consiste à diviser l'ensemble des données en petits sous-ensembles appelés \emph{batches}. Chaque batch contient un nombre réduit d'observations, permettant de calculer les gradients et de mettre à jour les poids du modèle de manière itérative. 
+
+Le fonctionnement est décrit comme suit :
+\begin{itemize}
+    \item \textbf{Division des données :} Les données d'entraînement sont séparées en plusieurs batches de taille $B$ (un hyperparamètre défini par l'utilisateur).
+    \item \textbf{Mise à jour par batch :} Pour chaque batch, les gradients de la fonction de coût sont calculés uniquement sur les observations de ce lot. Les poids du modèle sont ensuite mis à jour en fonction de ces gradients.
+    \item \textbf{Itération sur plusieurs époques :} Une \emph{époque} correspond au passage complet sur tous les batches. Ce processus est répété sur plusieurs époques pour optimiser les poids.
+\end{itemize}
+
+L'utilisation du traitement par batch présente plusieurs avantages :
+\begin{itemize}
+    \item Elle réduit les besoins en mémoire, car seules les données du batch courant sont chargées.
+    \item Elle accélère les calculs en exploitant les architectures modernes comme les GPU ou CPU multi-cœurs.
+    \item Elle combine la précision des gradients calculés sur plusieurs observations avec la rapidité de la mise à jour fréquente des poids.
+\end{itemize}
+
+Pour arrêter l'optimisation, nous utilisons un \textbf{seuil de tolérance}, le paramètre \texttt{tol} de notre fonction. La descente de gradient s'arrête lorsque la variation de la log-vraisemblance entre deux époques successives devient inférieure à ce seuil, indiquant que le modèle a convergé. Cela permet d'éviter un nombre excessif d'itérations tout en garantissant une solution optimale.
+
+
+\subsubsection{Pseudo-code}
+
+
+L'algorithme d'entraînement de la régression logistique multinomiale est décrit dans le pseudocode suivant.
+
+\begin{algorithm}
+\caption{Entraînement du modèle de régression logistique multinomiale}
+\begin{algorithmic}[1]
+\State \textbf{Entrée :} taux d'apprentissage (\texttt{learning\_rate}), nombre d'itérations maximales (\texttt{max\_iter}), taille du lot (\texttt{batch\_size}), tolérance de convergence (\texttt{tol})
+\State \textbf{Sortie :} coefficients du modèle
+
+\If {les données ne sont pas préparées}
+    \State \textbf{Stop} "Les données doivent être préparées avant l'entraînement."
+\EndIf
+
+\State \textbf{Récupérer les données d'entraînement} : \( X \) et \( y \)
+\State \textbf{Initialiser les coefficients} du modèle
+
+\State \textbf{Encoder les classes} de \( y \) en format One-Hot
+
+\State \textbf{Initialiser la log-vraisemblance} (\( \texttt{prev\_log\_likelihood} \) à -Inf)
+
+\For {i = 1 à \texttt{max\_iter}}
+    \State Mélanger les indices des données
+    \For {chaque lot de données de taille \texttt{batch\_size}}
+        \State Extraire le sous-ensemble de données \( X_{\text{batch}} \) et \( y_{\text{batch}} \)
+        \State Calculer les scores : \( \text{scores} = X_{\text{batch}} \times \text{coefficients} \)
+        \State Appliquer la fonction Softmax pour obtenir les probabilités
+        \State Calculer le gradient : \( \text{gradient} = X_{\text{batch}}^T \times (\text{probabilités} - y_{\text{batch}}) / \text{taille du lot} \)
+        \State Mettre à jour les coefficients : \( \text{coefficients} = \text{coefficients} - \text{learning\_rate} \times \text{gradient} \)
+    \EndFor
+    
+    \State Calculer la log-vraisemblance pour l'ensemble des données
+    \If {la log-vraisemblance est invalide ou infinie}
+        \State \textbf{Stop} "Log-vraisemblance invalide, arrêter l'entraînement."
+    \EndIf
+    
+    \If {convergence atteinte, i.e., \( | \text{log\_likelihood} - \text{prev\_log\_likelihood} | < \text{tol} \)}
+        \State \textbf{Stop} "Convergence atteinte à l'itération i."
+    \EndIf
+    
+    \State Mettre à jour \( \text{prev\_log\_likelihood} \)
+    
+    \If {i \% 100 == 0}
+        \State Afficher la log-vraisemblance à l'itération i
+    \EndIf
+\EndFor
+
+\State \textbf{Mettre à jour les coefficients finaux du modèle}
+\State \textbf{Mettre à jour l'état du modèle} : modèle prêt pour prédiction
+\end{algorithmic}
+\end{algorithm}
+
+
+
+\newpage
+
+\subsection{Fonction \texttt{predict}}
+
+
+La fonction \texttt{predict} est utilisée pour effectuer des prédictions sur les données de test en se basant sur le modèle de régression logistique multinomial entraîné avec la fonction fit(). Elle retourne la performance de la prédiction.
+
+\paragraph{Détails des étapes:}
+\begin{itemize}
+    \item \textbf{Vérification de l'état du modèle:} 
+    Avant toute prédiction, la fonction s’assure que le modèle a été entraîné (\texttt{fit}). Si ce n'est pas le cas, un message d'erreur informatif est levé : 
+    \texttt{"You must fit the model before making predictions by calling the `fit` method."}
+
+    \item \textbf{Calcul des scores logistiques (\textit{logits}):}
+    Une multiplication matricielle est effectuée entre les données de test (avec le biais ajouté) et les coefficients du modèle (\texttt{self\$coefficients}). 
+    \[
+    \text{scores} = X \times \text{coefficients}
+    \]
+    Chaque ligne de la matrice \texttt{scores} représente les scores calculés pour une observation, et chaque colonne correspond à une classe.
+
+    \item \textbf{Application de la fonction Softmax:}
+    La fonction Softmax est appliquée pour transformer les scores en probabilités, garantissant que la somme des probabilités pour chaque observation est égale à 1 :
+    \[
+    \text{softmax}(z_i) = \frac{\exp(z_i - \max(z))}{\sum_j \exp(z_j - \max(z))}
+    \]
+    Ici, \(\max(z)\) est utilisé pour éviter les problèmes numériques dus à des valeurs exponentielles très élevées.
+
+    \item \textbf{Détermination des classes prédictives:}
+    Pour chaque observation, la classe ayant la probabilité la plus élevée est sélectionnée comme prédiction. Cela se fait via:
+    \[
+    \text{predicted\_class} = \arg\max(\text{softmax\_probs})
+    \]
+    Ces classes prédictives sont stockées dans \texttt{self\$predicted\_targets}.
+
+    \item \textbf{Évaluation de la performance:}
+    Une comparaison entre les classes prédictives (\texttt{predicted\_targets}) et les vraies classes (\texttt{y\_test}) permet de calculer la précision globale (\texttt{accuracy}):
+    \[
+    \text{accuracy} = \frac{\text{Nombre de prédictions correctes}}{\text{Nombre total d'observations}}
+    \]
+
+    \item \textbf{Mise à jour de l'état du modèle:}
+    Après avoir effectué les prédictions, l’état interne du modèle est mis à jour pour indiquer qu’il est maintenant en phase "prédictions réalisées" (\texttt{private\$state = "predicted"}).
+\end{itemize}
+
+
+\subsection{Fonction \texttt{predict\_proba}} 
+La fonction \texttt{predict\_proba} calcule les probabilités d'appartenance de chaque observation de l'ensemble de test (\texttt{X\_test}) à chacune des classes cibles. Elle utilise les scores prédits par le modèle (logits) et applique la fonction softmax pour transformer ces scores en probabilités.
+
+\paragraph{Étapes principales :}
+\begin{itemize}
+    \item Une colonne d'intercept est ajoutée aux données d'entrée pour inclure le biais dans les calculs.
+    \item Les scores (\textit{logits}) pour chaque classe sont calculés en multipliant les données d'entrée augmentées par la matrice des coefficients du modèle.
+    
+    \item La fonction softmax est appliquée aux scores pour normaliser les valeurs et obtenir des probabilités. Cela comprend le calcul des exponentielles des scores (après soustraction du maximum pour éviter les problèmes de dépassement numérique) et la normalisation de ces exponentielles par la somme des valeurs pour chaque observation.
+    
+    \item Les probabilités pour chaque observation et chaque classe sont retournées sous la forme d'une matrice, où chaque ligne correspond à une observation et chaque colonne à une classe (Voir Annexe) .
+\end{itemize}
+
+
+\subsection{Fonction \texttt{var\_importance}}
+
+La fonction \texttt{var\_importance} calcule et retourne l'importance relative des variables explicatives dans le modèle de régression logistique multinomial. Elle permet de quantifier la contribution de chaque variable dans la prédiction des classes.
+
+\paragraph{Détails des étapes:}
+\begin{itemize}
+    \item \textbf{Extraction des coefficients (sans l'intercept):}
+     Les coefficients associés aux variables explicatives sont extraits de la matrice des coefficients (\texttt{self\$coefficients}), en excluant le biais ou intercept (la première colonne). Cela permet de concentrer l'analyse uniquement sur les contributions directes des variables.
+    
+
+    \item \textbf{Calcul des scores d'importance:}
+    La contribution de chaque variable est mesurée par la somme des valeurs absolues de ses coefficients sur toutes les classes.
+        \[
+        \text{importance\_score}_j = \sum_{k=1}^K |\text{coef}_{jk}|
+        \]
+        où \(j\) représente une variable et \(k\) les différentes classes cibles.
+
+    \item \textbf{Association des scores aux variables:}
+    Les scores normalisés sont associés aux noms des variables explicatives \texttt{data.frame}. Il contient donc le nom de la variable explicative et son score d'importance trié par ordre décroissant.
+\end{itemize}
+
+Voici un exemple de sortie de la fonction  \texttt{var\_importance}:
+\begin{verbatim}
+   Variable   Importance
+1  Var_A      0.25
+2  Var_B      0.20
+3  Var_C      0.15
+4  Var_D      0.10
+\end{verbatim}
+
+
+\subsection{Fonction \texttt{var\_select}}
+
+Cette fonction permet de sélectionner les variables les plus importantes dans un ensemble de données d'entraînement et de test, en fonction des scores d'importance calculés par la méthode \texttt{var\_importance}. Elle peut conserver un nombre fixe de variables (\texttt{num\_vars}) ou filtrer selon un seuil d'importance (\texttt{threshold}).\\
+L'attribut \textbf{\texttt{threshold}} (\textit{par défaut : 0.05}), spécifie un seuil minimal pour le score d'importance. Les variables ayant un score supérieur ou égal à ce seuil sont conservées. Si \texttt{num\_vars} est défini, cet argument est ignoré. L'attribut \textbf{\texttt{num\_vars}} (\textit{par défaut : NULL}) spécifie le nombre de variables les plus importantes à conserver, triées par ordre décroissant d'importance. Si défini, remplace le critère basé sur \texttt{threshold}.
+
+Cette fonction ne retourne pas de valeur, par contre, les ensembles \texttt{X\_train} et \texttt{X\_test} sont mis à jour pour ne conserver que les variables sélectionnées.
+La liste des prédicteurs sélectionnés est sauvegardée dans \texttt{self\$predictors}.
+
+
+Cette fonction est particulièrement utile pour :
+\begin{itemize}
+    \item Réduire la dimensionnalité des données et améliorer les performances.
+    \item Identifier les variables ayant un impact significatif sur les prédictions.
+    \item Optimiser les modèles en éliminant les caractéristiques non pertinentes.
+\end{itemize}
+L'idéal après l'utilisation de cette fonction serait de faire un \texttt{fit()} et de mesurer la perfomance du modèle.
+
+
+\subsection{Fonction \texttt{generate\_confusion\_matrix}}
+
+Cette fonction génère une matrice de confusion basée sur les labels réels et les prédictions effectuées par le modèle. Elle calcule également des métriques de performance importantes telles que la précision globale (\textit{accuracy}), la précision par classe (\textit{precision}), le rappel (\textit{recall}) et le F1-score pour évaluer les performances du modèle.
+La fonction retourne une liste contenant :
+\begin{itemize}
+    \item \textbf{\texttt{confusion\_matrix}} : Une matrice $K \times K$ (où $K$ est le nombre de classes), montrant les correspondances entre les labels réels et prédits.
+    \item \textbf{\texttt{accuracy}} : Un score entre 0 et 1 représentant la proportion de prédictions correctes.
+    \item \textbf{\texttt{precision}} : Un vecteur contenant la précision pour chaque classe.
+    \item \textbf{\texttt{recall}} : Un vecteur contenant le rappel pour chaque classe.
+    \item \textbf{\texttt{f1\_score}} : Un vecteur contenant le F1-score pour chaque classe.
+\end{itemize}
+
+
+\subsection{Fonctions \texttt{summary} et \texttt{print}}
+
+\paragraph{Fonction \texttt{summary} :}
+Elle fournit un résumé détaillé du modèle de régression logistique multinomiale. Elle affiche les informations suivantes dans la console :
+\begin{itemize}
+    \item Le nombre d'observations dans les ensembles d'entraînement (\texttt{X\_train}) et de test (\texttt{X\_test}).
+    \item Le nombre de prédicteurs utilisés dans le modèle.
+    \item Le nombre de classes cibles, ainsi que leurs étiquettes (\texttt{class\_labels}).
+    \item Les fréquences des classes dans l'ensemble d'entraînement.
+    \item Les cinq premiers coefficients du modèle, si le modèle a été ajusté (\texttt{fit}).
+    \item L'accuracy sur les données de test, si des prédictions ont été effectuées.
+\end{itemize}
+Pour adapter la fonction summary de R à notre classe R6, nous avons ajouté une méthode \texttt{summary.R6} à l'extérieur de notre classe.
+
+\paragraph{Fonction \texttt{print} :}
+La fonction \texttt{print} offre un résumé concis des principales caractéristiques du modèle. Les informations affichées incluent :
+\begin{itemize}
+    \item Le nombre de classes cibles et leurs étiquettes.
+    \item Le nombre de prédicteurs dans le modèle.
+    \item Les cinq premiers coefficients du modèle, si celui-ci a été ajusté (\texttt{fit}).
+\end{itemize}
+
+Notons que ces fonctions affichent directement les résultats dans la console et ne retournent aucune valeur. Pour accéder à ces fonctions, deux méthodes s'offrent à vous:
+
+\begin{verbatim}
+model$summary() ou summary(model)
+model$print() ou print(model)
+\end{verbatim}
+
+\subsection{Autres fonctions}
+En complément des fonctions principales du projet, nous avons également développé plusieurs fonctionnalités annexes, tout aussi importantes pour enrichir et simplifier l’expérience utilisateur. Ces fonctionnalités ont été conçues pour offrir une meilleure ergonomie, automatiser des tâches récurrentes, et rendre l’interaction avec le modèle plus intuitive. Parmi celles-ci, on peut citer :
+
+\subsubsection{Fonction \texttt{target\_select}}
+
+La fonction \texttt{target\_select} permet de sélectionner automatiquement la meilleure colonne cible parmi les colonnes catégoriques d’un jeu de données. Elle repose sur deux critères principaux : l’entropie des classes et la corrélation moyenne avec d'autres colonnes catégoriques. Cette automatisation facilite le choix de la variable cible dans les projets de classification. Elle est particulièrement utile dans des contextes où le jeu de données contient plusieurs colonnes catégoriques, rendant difficile le choix manuel d’une cible pertinente. En automatisant cette tâche, elle permet de gagner du temps tout en garantissant une sélection objective et basée sur des critères bien définis.
+
+\paragraph{Étapes principales :}
+\begin{enumerate}
+    \item \textbf{Filtrage initial des colonnes :} Les colonnes catégoriques sont conservées si elles respectent les deux critères suivants :
+    \begin{itemize}
+        \item Elles contiennent au moins deux catégories.
+        \item Elles ont moins de 10\% de valeurs manquantes.
+    \end{itemize}
+
+    \item \textbf{Calcul de l’entropie des classes :} 
+    L’entropie mesure la dispersion des classes dans une colonne. Les colonnes présentant une entropie inférieure à un seuil (\texttt{entropy\_threshold}) sont éliminées, car elles sont considérées comme insuffisamment informatives.
+
+    \item \textbf{Mesure de la corrélation des colonnes (\textit{Cramer’s V}) :}
+    La corrélation entre les colonnes catégoriques restantes est calculée à l’aide du coefficient de corrélation de Cramer. Une corrélation élevée peut indiquer une redondance entre les colonnes.
+
+    \item \textbf{Normalisation et combinaison des scores :}
+    \begin{itemize}
+        \item L’entropie est normalisée entre 0 et 1.
+        \item La corrélation moyenne est également normalisée et inversée pour privilégier les colonnes peu corrélées.
+        \item Un score combiné est calculé en pondérant l’entropie et la corrélation selon des poids (\texttt{weight\_entropy} et \texttt{weight\_correlation}).
+    \end{itemize}
+
+    \item \textbf{Sélection de la meilleure colonne cible :}
+    \begin{itemize}
+        \item Les colonnes dont la corrélation moyenne est inférieure à un seuil (\texttt{correlation\_threshold}) sont privilégiées.
+        \item Parmi ces colonnes, celle ayant le score combiné le plus élevé est choisie comme cible.
+        \item Si aucune colonne ne respecte les seuils de corrélation, la colonne avec le meilleur score combiné global est sélectionnée.
+    \end{itemize}
+\end{enumerate}
+
+\paragraph{Sous-fonctions associées :}
+\begin{itemize}
+    \item \texttt{cramers\_v(x, y) :} Cette fonction calcule le coefficient de corrélation de Cramer pour mesurer l’association entre deux variables catégoriques.
+    \item \texttt{compute\_entropy(y) :} Elle calcule l’entropie des classes pour évaluer la dispersion d’une variable catégorique.
+\end{itemize}
+
+
+
+
+\section{Application R SHINY}
+
+L'application R Shiny a été développée pour fournir une interface utilisateur interactive et intuitive autour du package R dédié à la régression logistique multinomiale stochastique. Elle vise à simplifier l'analyse des données multiclasse en combinant des fonctionnalités avancées avec une visualisation conviviale. Linterface de l'application est divisée trois parties:
+\begin{enumerate}
+    \item \textbf{Les onglets} : qui permettent de paramétrer les fonctions du package.
+    \item \textbf{La barre d'info}: un espace dédié à la communication des messages importants tels que les avertissements, les erreurs ou les confirmations des actions effectuées.
+    \item \textbf{La visualisation} : elle présente les résultats des manipulations et analyses sous forme de graphiques, ainsi que des tableaux pour explorer les sorties du modèle.
+\end{enumerate}
+ 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth, height=0.5\textwidth]{images/1.png}
+    \caption{Interface R Shiny}
+    \label{fig:app_r_shiny}
+\end{figure}
+
+Regardons un peu plus en détails la section des \textbf{Onglets}.
+
+\subsection{Onglet Data}
+L'onglet Data est dédié à la préparation des données, une étape essentielle pour garantir la qualité des analyses. Il permet d’\textbf{importer des fichiers } CSV ou Excel (jusqu’à 1 Go), avec une \textbf{détection automatique ou manuelle des délimiteurs} pour les fichiers CSV. Cet onglet inclut également des options pour \textbf{traiter les valeurs manquantes} : les variables numériques peuvent être corrigées en remplaçant les valeurs manquantes par la moyenne, la médiane ou le mode, ou en supprimant les observations concernées ; pour les variables catégorielles, des méthodes similaires sont proposées, avec la possibilité d’ignorer ou de supprimer les valeurs manquantes. Une fois ces étapes finalisées, les données sont prêtes pour l’analyse prédictive.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth, height=0.5\textwidth]{images/data.png}
+    \caption{Onglet Data}
+    \label{fig:onglet_data}
+\end{figure}
+
+\subsection{Onglet Modeling}
+L’onglet Modeling, quant à lui, accompagne l’utilisateur dans l’application des modèles de régression logistique multinomiale. Il commence par une phase de préparation où l’utilisateur sélectionne la variable cible à prédire, spécifie les colonnes à supprimer si nécessaire, et ajuste la proportion des données réservées au test. Une fois les données préparées via le bouton dédié, l’étape suivante consiste à paramétrer le modèle, notamment en définissant le taux d’apprentissage, avant de lancer l’entraînement.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth, height=0.5\textwidth]{images/modeling.png}
+    \caption{Onglet Modeling}
+    \label{fig:onglet_modeling}
+\end{figure}
+
+\section{Performance du modèle}
+Nous avons évalué notre modèle sur le jeu de données \textit{iris\_extended.csv} qui compte 1200 lignes et 21 colonnes.
+Le but de cette section est de montrer la performance de notre modèle basé sur le traitement par batch.
+\begin{table}[h!]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Étape} & \textbf{Temps (batch size 1)} & \textbf{Temps (batch size 50)} \\
+\hline
+Temps de traitement & 0.06108212 sec & 0.04612303 sec \\
+\hline
+Temps d'entraînement & 1.051246 min & 8.739952 sec \\
+\hline
+Temps de prédiction & 0.01797605 sec & 0.01947784 sec \\
+\hline
+Temps total & 1.060877 min & 9.393789 sec \\
+\hline
+\end{tabular}
+\caption{Tableau des temps d'exécution du modèle}
+\end{table}
+
+Le temps de traitement de notre algorithme, sans prendre en compte le batch\_size, c'est-à-dire, fixé à 1, est beaucoup plus long que lorsque le paramètre est optimisé (50), comme nous pouvons le voir sur la dernière colonne.
+
+\subsection{Comparaison par rapport à scikit-learn sur Python et nnet sur R}
+
+Pour obtenir la comparaison la plus juste, les deux packages ont été testé sur le même jeu de données \textit{iris\_extended.csv} et avec les mêmes traitements implémentés : les variables catégoriques encodées avec la méthode du one-hot, les variables numériques sont normalisées, le jeu de données est séparé en train/test avec un test\_size de 0.3 et une graine de 123.
+
+
+
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\linewidth]{images/image.png}
+    \caption{Performance avec scikit-learn sur Python}
+    \label{fig:scikit-learn}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\linewidth]{images/nnet.png}
+    \caption{Performance avec nnet sur R}
+    \label{fig:nnet_r}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\linewidth]{images/performance_package_R.png}
+    \caption{Performance de notre package}
+    \label{fig:package-R}
+\end{figure}
+
+
+Au vu de cette comparaison des performances, il apparaît que, bien que le jeu de données ne soit pas particulièrement volumineux, notre modèle présente des temps de calcul plus longs, même avec des tailles de batch élevées. Cependant, en termes d' accuracy, le modèle se positionne très favorablement par rapport à Scikit-learn et nnet. En effet, les scores obtenus sont remarquablement similaires, ce qui témoigne de la solidité du modèle en termes de performance prédictive.
+
+
+ 
+\section*{Conclusion et perspectives}
+En conclusion, le modèle de régression logistique multinomiale stochastique développé dans le cadre de ce projet a démontré son efficacité pour traiter des problématiques de classification multiclasse. Sa conception, basée sur une approche par descente de gradient stochastique, offre une solution flexible et adaptée à des ensembles de données de tailles variées, tout en permettant une convergence rapide grâce à une gestion par lots et un seuil de tolérance défini. L’intégration de l’ensemble des étapes de traitement, de l’encodage des variables catégoriques à la normalisation des variables numériques, renforce la cohérence des prédictions et simplifie son utilisation pratique. Néanmoins, le modèle présente certaines limites. Il est particulièrement sensible au choix des hyperparamètres, tels que le taux d'apprentissage ou la taille des lots, et peut rencontrer des difficultés face à des données fortement déséquilibrées ou contenant des classes rares. De plus, bien qu’il soit robuste sur des jeux de données standardisés, son implémentation nécessite une connaissance préalable des étapes de prétraitement. 
+
+En termes de perspectives, plusieurs axes d’amélioration peuvent être envisagés. Par exemple, l’intégration d’une validation croisée automatisée pour optimiser les hyperparamètres pourrait renforcer la performance du modèle. De même, l’ajout de régularisations L1 ou L2 pourrait permettre de mieux gérer la colinéarité entre les variables prédictives. L'ajout d'une fonction pour prédire à partir d'individus supplémentaires est aussi un axe d'amélioration intéressant à implementer.
+Enfin, l’extension de l’application Shiny pour intégrer d’autres méthodes de classification ou des visualisations plus interactives offrirait une expérience utilisateur encore plus riche et adaptée aux besoins des analystes.
+
+\addcontentsline{toc}{section}{Conclusion et perspectives} 
+\markboth{Conclusion et perspectives}{}
+
+
+\section*{Références}
+
+\addcontentsline{toc}{section}{Références}
+\markboth{Références}{}
+
+\begin{itemize}
+  \item \href{https://en.wikipedia.org/wiki/Stochastic_gradient_descent#Sign-based_stochastic_gradient_descent}{Wikipedia Stochastic gradient descent}
+  \item \href{https://en.wikipedia.org/wiki/Multinomial_logistic_regression}{Multinomial logistic regression}
+  \item \href{https://eric.univ-lyon2.fr/ricco/cours/slides/gradient_descent.pdf}{Gradient Descent pour le machine learning}
+
+  \item \href{https://machinelearningmastery.com/logistic-regression-with-maximum-likelihood-estimation/}{A Gentle Introduction to Logistic Regression With Maximum Likelihood Estimation}
+  
+  \item \href{https://www.statology.org/interpret-log-likelihood/#:~:text=The%20log%2Dlikelihood%20value%20of,negative%20infinity%20to%20positive%20infinity.}{Interpret Log likelihood}
+
+  \item \href{https://www.statlect.com/fundamentals-of-statistics/logistic-model-maximum-likelihood}{Logistic model Maximum likelihood}
+
+  \item \href{https://www.linkedin.com/pulse/derivative-gradient-descent-linear-logistic-regression-a-nayem/}{Derivative gradient descent logistic regression - Linkedin}
+
+  \item \href{https://towardsdatascience.com/multiclass-logistic-regression-from-scratch-9cc0007da372}{Multiclass logistic regression from scratch}
+  
+\end{itemize}
+
+
+\section*{Annexes}
+
+\addcontentsline{toc}{section}{Annexes}
+\markboth{Annexes}{}
+
+Nous avons implémenté dans la section Data Preview de l'application, des visualisations des résultats de l'analyse prédictives. Sont visibles dans cette partie, les probabilités d'appartenance aux classes, l'importance des variables, la matrice de confusion.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{images/probabilities.png}
+    \caption{Probabilités d'appartenance}
+    \label{fig:proba}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{images/var_importance.png}
+    \caption{Importance des variables}
+    \label{fig:var_importance}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\linewidth]{images/confusion_matrix.png}
+    \caption{Confusion matrix}
+    \label{fig:matrix}
+\end{figure}
+
+\end{document}
+
+
+
