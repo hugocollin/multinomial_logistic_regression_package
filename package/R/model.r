@@ -19,8 +19,6 @@ library(roxygen2)
 #'  \item{\code{var_select}}{Selects predictor variables based on their importance scores or a specified threshold.}
 #'  \item{\code{predict}}{Makes predictions on the test data using the fitted model and calculates the model's accuracy.}
 #'  \item{\code{predict_proba}}{Calculates the predicted probabilities for each class using the softmax function applied to the model's coefficients and test data.}
-#'  \item{\code{actual_labels}}{Converts the actual class indices to their corresponding class labels.}
-#'  \item{\code{predictions_to_labels}}{Converts the predicted class indices to their corresponding class labels.}
 #'  \item{\code{generate_confusion_matrix}}{Generates a confusion matrix and calculates performance metrics such as precision, recall, and F1-score for each class.}
 #'  \item{\code{summary}}{Displays a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.}
 #'  \item{\code{print}}{Displays basic information about the logistic regression model, including the number of classes, predictors, class labels, and coefficients if available.}
@@ -38,7 +36,23 @@ library(roxygen2)
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
   private = list(
-    state = 0
+    state = 0,
+
+    # Ajout de la méthode actual_labels dans la classe LogisticRegression
+    actual_labels = function() {
+      # Conversion des labels réels en vecteurs
+      actual_labels <- self$class_labels[self$y_test + 1]
+      
+      return(actual_labels)
+    },
+    
+    # Fonction de conversion des prédictions en labels
+    predictions_to_labels = function() {
+      # Conversion des labels prédits en vecteurs
+      predicted_labels <- self$class_labels[self$predicted_targets + 1]
+      
+      return(predicted_labels)
+    }
   ),
   public = list(
     #' @field data Data frame containing the raw data loaded from the specified file.
@@ -650,7 +664,7 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' It calculates the scores for each class, applies the softmax function to obtain class probabilities, 
     #' and predicts the class with the highest probability. The accuracy of the model is then calculated based on the predictions.
     #'
-    #' @return The function returns the accuracy of the model on the test data.
+    #' @return Invisibly updates the predicted targets and accuracy attributes.
     #'
     #' @examples
     #' \dontrun{
@@ -687,14 +701,9 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       # Stockage des classes prédites
       self$predicted_targets <- predicted_classes
-      
-      # Calcul de la performance
-      self.accuracy <- mean(predicted_classes == self$y_test)
 
       # Mise à jour de l'état
       private$state <- 4
-      
-      return(self.accuracy)
     },
 
     #' Predict class probabilities
@@ -736,60 +745,6 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Retourner les probabilités pour chaque classe
       return(softmax_probs)
     },
-
-    #' Convert actual class indices to class labels
-    #' 
-    #' Maps numeric class indices from the actual outputs to their corresponding class labels.
-    #' 
-    #' @return A data frame containing the actual class labels.
-    #' 
-    #' @details
-    #' This function takes the actual class indices (stored in \code{self$y_test}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
-    #' The mapping is achieved by indexing \code{self$class_labels} with the actual class indices (incremented by 1 to account for R's 1-based indexing).
-    #' 
-    #' @examples
-    #' \dontrun{
-    #' # Convert actual class indices to labels
-    #' actual_labels <- model$actual_labels()
-    #' 
-    #' # View the first few actual labels
-    #' print(head(actual_labels))
-    #' }
-
-    # Ajout de la méthode actual_labels dans la classe LogisticRegression
-    actual_labels = function() {
-      # Conversion des labels réels en vecteurs
-      actual_labels <- self$class_labels[self$y_test + 1]
-      
-      return(actual_labels)
-    },
-
-    #' Convertpredicted classes to class labels
-    #'
-    #' Maps numeric class indices from the predicted outputs to their corresponding class labels.
-    #'
-    #' @return A data frame containing the predicted class labels.
-    #'
-    #' @details
-    #' This function takes the predicted class indices (stored in \code{self$predicted_targets}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
-    #' The mapping is achieved by indexing \code{self$class_labels} with the predicted class indices (incremented by 1 to account for R's 1-based indexing).
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Convert predicted class indices to labels
-    #' predicted_labels <- model$predictions_to_labels()
-    #'
-    #' # View the first few predicted labels
-    #' print(head(predicted_labels))
-    #' }
-    
-    # Fonction de conversion des prédictions en labels
-    predictions_to_labels = function() {
-      # Conversion des labels prédits en vecteurs
-      predicted_labels <- self$class_labels[self$predicted_targets + 1]
-      
-      return(predicted_labels)
-    },
     
     #' Generate Confusion Matrix and Performance Metrics
     #'
@@ -814,9 +769,15 @@ LogisticRegression <- R6Class("LogisticRegression",
     #' print(results$recall)
     #' print(results$f1_score)
     #' }
+    #' 
+    #' @note The \code{generate_confusion_matrix} method must be called after making predictions using the \code{predict} method.
 
     # Fonction de génération de la matrice de confusion et des métriques de performance
     generate_confusion_matrix = function() {
+      if (private$state < 4) {
+        stop("[WARNING] You must make predictions before generating the confusion matrix by calling the `predict` method.")
+      }
+
       # Convertion des labels en vecteurs
       true_labels <- as.vector(self$y_test)
       predicted_labels <- as.vector(self$predicted_targets)

@@ -45,6 +45,11 @@ The \code{predict} method must be called after fitting the model using the \code
 Predict class probabilities
 
 Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
+
+The \code{generate_confusion_matrix} method must be called after making predictions using the \code{predict} method.
+Summary of the Logistic Regression Model
+
+Prints a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.
 }
 \section{Methods}{
 
@@ -58,8 +63,6 @@ Computes the predicted probabilities for each class using the softmax function a
  \item{\code{var_select}}{Selects predictor variables based on their importance scores or a specified threshold.}
  \item{\code{predict}}{Makes predictions on the test data using the fitted model and calculates the model's accuracy.}
  \item{\code{predict_proba}}{Calculates the predicted probabilities for each class using the softmax function applied to the model's coefficients and test data.}
- \item{\code{actual_labels}}{Converts the actual class indices to their corresponding class labels.}
- \item{\code{predictions_to_labels}}{Converts the predicted class indices to their corresponding class labels.}
  \item{\code{generate_confusion_matrix}}{Generates a confusion matrix and calculates performance metrics such as precision, recall, and F1-score for each class.}
  \item{\code{summary}}{Displays a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.}
  \item{\code{print}}{Displays basic information about the logistic regression model, including the number of classes, predictors, class labels, and coefficients if available.}
@@ -173,38 +176,6 @@ probabilities <- model$predict_proba()
 # Print the predicted probabilities
 print(probabilities)
 }
-Convert actual class indices to class labels
-
-Maps numeric class indices from the actual outputs to their corresponding class labels.
-
-
-## ------------------------------------------------
-## Method `LogisticRegression$actual_labels`
-## ------------------------------------------------
-
-\dontrun{
-# Convert actual class indices to labels
-actual_labels <- model$actual_labels()
-
-# View the first few actual labels
-print(head(actual_labels))
-}
-Convertpredicted classes to class labels
-
-Maps numeric class indices from the predicted outputs to their corresponding class labels.
-
-
-## ------------------------------------------------
-## Method `LogisticRegression$predictions_to_labels`
-## ------------------------------------------------
-
-\dontrun{
-# Convert predicted class indices to labels
-predicted_labels <- model$predictions_to_labels()
-
-# View the first few predicted labels
-print(head(predicted_labels))
-}
 Generate Confusion Matrix and Performance Metrics
 
 Generates a confusion matrix based on actual and predicted labels and calculates key performance metrics such as accuracy, precision, recall, and F1-score for each class.
@@ -223,9 +194,6 @@ print(results$precision)
 print(results$recall)
 print(results$f1_score)
 }
-Summary of the Logistic Regression Model
-
-Prints a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.
 
 
 ## ------------------------------------------------
@@ -310,8 +278,6 @@ Initializes the \code{LogisticRegression} class by loading data from a specified
 \item \href{#method-LogisticRegression-var_select}{\code{LogisticRegression$var_select()}}
 \item \href{#method-LogisticRegression-predict}{\code{LogisticRegression$predict()}}
 \item \href{#method-LogisticRegression-predict_proba}{\code{LogisticRegression$predict_proba()}}
-\item \href{#method-LogisticRegression-actual_labels}{\code{LogisticRegression$actual_labels()}}
-\item \href{#method-LogisticRegression-predictions_to_labels}{\code{LogisticRegression$predictions_to_labels()}}
 \item \href{#method-LogisticRegression-generate_confusion_matrix}{\code{LogisticRegression$generate_confusion_matrix()}}
 \item \href{#method-LogisticRegression-summary}{\code{LogisticRegression$summary()}}
 \item \href{#method-LogisticRegression-print}{\code{LogisticRegression$print()}}
@@ -607,7 +573,7 @@ model$var_select(num_vars = 10)
 }
 
 \subsection{Returns}{
-The function returns the accuracy of the model on the test data.
+Invisibly updates the predicted targets and accuracy attributes.
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
@@ -652,76 +618,6 @@ probabilities <- model$predict_proba()
 # Print the predicted probabilities
 print(probabilities)
 }
-Convert actual class indices to class labels
-
-Maps numeric class indices from the actual outputs to their corresponding class labels.
-
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-LogisticRegression-actual_labels"></a>}}
-\if{latex}{\out{\hypertarget{method-LogisticRegression-actual_labels}{}}}
-\subsection{Method \code{actual_labels()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$actual_labels()}\if{html}{\out{</div>}}
-}
-
-\subsection{Details}{
-This function takes the actual class indices (stored in \code{self$y_test}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
-The mapping is achieved by indexing \code{self$class_labels} with the actual class indices (incremented by 1 to account for R's 1-based indexing).
-}
-
-\subsection{Returns}{
-A data frame containing the actual class labels.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-# Convert actual class indices to labels
-actual_labels <- model$actual_labels()
-
-# View the first few actual labels
-print(head(actual_labels))
-}
-Convertpredicted classes to class labels
-
-Maps numeric class indices from the predicted outputs to their corresponding class labels.
-
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-LogisticRegression-predictions_to_labels"></a>}}
-\if{latex}{\out{\hypertarget{method-LogisticRegression-predictions_to_labels}{}}}
-\subsection{Method \code{predictions_to_labels()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$predictions_to_labels()}\if{html}{\out{</div>}}
-}
-
-\subsection{Details}{
-This function takes the predicted class indices (stored in \code{self$predicted_targets}) and maps them to their corresponding class labels (stored in \code{self$class_labels}).
-The mapping is achieved by indexing \code{self$class_labels} with the predicted class indices (incremented by 1 to account for R's 1-based indexing).
-}
-
-\subsection{Returns}{
-A data frame containing the predicted class labels.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-# Convert predicted class indices to labels
-predicted_labels <- model$predictions_to_labels()
-
-# View the first few predicted labels
-print(head(predicted_labels))
-}
 Generate Confusion Matrix and Performance Metrics
 
 Generates a confusion matrix based on actual and predicted labels and calculates key performance metrics such as accuracy, precision, recall, and F1-score for each class.
@@ -761,9 +657,6 @@ print(results$precision)
 print(results$recall)
 print(results$f1_score)
 }
-Summary of the Logistic Regression Model
-
-Prints a summary of the logistic regression model, including the number of observations, predictors, classes, class labels, class frequencies, and model coefficients.
 
 }
 \if{html}{\out{</div>}}
