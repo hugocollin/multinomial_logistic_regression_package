@@ -211,6 +211,7 @@ server <- function(input, output, session) {
       disable("predict")
       output$missing_info <- renderText(NULL)
       rv$predict_proba <- NULL
+      rv$var_importance <- NULL
       rv$model <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
@@ -283,6 +284,7 @@ server <- function(input, output, session) {
         disable("fit_model")
         disable("predict")
         rv$predict_proba <- NULL
+        rv$var_importance <- NULL
         rv$model <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
@@ -323,6 +325,7 @@ server <- function(input, output, session) {
       disable("fit_model")
       disable("predict")
       rv$predict_proba <- NULL
+      rv$var_importance <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       rv$accuracy <- NULL
@@ -399,6 +402,7 @@ server <- function(input, output, session) {
         disable("predict")
         rv$model <- NULL
         rv$predict_proba <- NULL
+        rv$var_importance <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         rv$accuracy <- NULL
@@ -538,6 +542,7 @@ server <- function(input, output, session) {
       disable("fit_model")
       disable("predict")
       rv$predict_proba <- NULL
+      rv$var_importance <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       rv$accuracy <- NULL
@@ -587,6 +592,7 @@ server <- function(input, output, session) {
         disable("fit_model")
         disable("predict")
         rv$predict_proba <- NULL
+        rv$var_importance <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         rv$accuracy <- NULL
@@ -609,6 +615,7 @@ server <- function(input, output, session) {
       
       disable("predict")
       rv$predict_proba <- NULL
+      rv$var_importance <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       rv$accuracy <- NULL
@@ -677,6 +684,7 @@ server <- function(input, output, session) {
         # Désactivation de l'interface
         disable("predict")
         rv$predict_proba <- NULL
+        rv$var_importance <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         rv$accuracy <- NULL
@@ -764,7 +772,8 @@ server <- function(input, output, session) {
     tagList(
       h3("Variable importance"),
       hr(),
-      DT::dataTableOutput("var_importance_table")
+      DT::dataTableOutput("var_importance_table"),
+      plotOutput("var_importance_plot")
     )
   })
 
@@ -831,6 +840,38 @@ server <- function(input, output, session) {
       scrollX = TRUE
     ), rownames = FALSE)
   }, server = TRUE)
+
+  # Affichage du graphique d'importance des variables
+  output$var_importance_plot <- renderPlot({
+    req(rv$var_importance)
+    
+    importance_df <- rv$var_importance
+    
+    # Trier par importance décroissante
+    importance_df <- importance_df[order(-importance_df$Importance), ]
+    
+    # Affichage du graphique et récupération des positions des barres
+    bp <- barplot(
+      importance_df$Importance,
+      names.arg = importance_df$Variable,
+      las = 2,
+      col = "black",
+      main = "Variable importance",
+      ylab = "Importance",
+      cex.names = 0.7,
+      ylim = c(0, max(importance_df$Importance) * 1.1)
+    )
+    
+    # Ajout des étiquettes de valeurs au-dessus des barres
+    text(
+      x = bp,
+      y = importance_df$Importance,
+      labels = round(importance_df$Importance, 4),
+      pos = 3,
+      cex = 0.8,
+      col = "black"
+    )
+  }, height = 400)
 
   # Rendu de la table des métriques
   output$metrics_table <- renderTable({
