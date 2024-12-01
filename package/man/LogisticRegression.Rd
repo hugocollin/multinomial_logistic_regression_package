@@ -281,6 +281,8 @@ Initializes the \code{LogisticRegression} class by loading data from a specified
 \item \href{#method-LogisticRegression-generate_confusion_matrix}{\code{LogisticRegression$generate_confusion_matrix()}}
 \item \href{#method-LogisticRegression-summary}{\code{LogisticRegression$summary()}}
 \item \href{#method-LogisticRegression-print}{\code{LogisticRegression$print()}}
+\item \href{#method-LogisticRegression-actual_labels}{\code{LogisticRegression$actual_labels()}}
+\item \href{#method-LogisticRegression-predictions_to_labels}{\code{LogisticRegression$predictions_to_labels()}}
 \item \href{#method-LogisticRegression-clone}{\code{LogisticRegression$clone()}}
 }
 }
@@ -711,6 +713,24 @@ model$print()
 }
 \if{html}{\out{</div>}}
 
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-actual_labels"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-actual_labels}{}}}
+\subsection{Method \code{actual_labels()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$actual_labels()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-predictions_to_labels"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-predictions_to_labels}{}}}
+\subsection{Method \code{predictions_to_labels()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$predictions_to_labels()}\if{html}{\out{</div>}}
 }
 
 }

@@ -35,25 +35,11 @@ library(roxygen2)
 
 # Définition de la classe LogisticRegression
 LogisticRegression <- R6Class("LogisticRegression",
-  private = list(
-    state = 0,
 
-    # Ajout de la méthode actual_labels dans la classe LogisticRegression
-    actual_labels = function() {
-      # Conversion des labels réels en vecteurs
-      actual_labels <- self$class_labels[self$y_test + 1]
-      
-      return(actual_labels)
-    },
-    
-    # Fonction de conversion des prédictions en labels
-    predictions_to_labels = function() {
-      # Conversion des labels prédits en vecteurs
-      predicted_labels <- self$class_labels[self$predicted_targets + 1]
-      
-      return(predicted_labels)
-    }
+  private = list(
+    state = 0
   ),
+  
   public = list(
     #' @field data Data frame containing the raw data loaded from the specified file.
     data = NULL,
@@ -778,21 +764,16 @@ LogisticRegression <- R6Class("LogisticRegression",
         stop("[WARNING] You must make predictions before generating the confusion matrix by calling the `predict` method.")
       }
 
-      # Convertion des labels en vecteurs
-      true_labels <- as.vector(self$y_test)
-      predicted_labels <- as.vector(self$predicted_targets)
-      
-      # Vérification de la cohérence des labels
-      if (length(true_labels) != length(predicted_labels)) {
-        stop("[Error] The length of true labels and predicted labels must be the same.")
-      }
+      # Obtention des labels
+      true_labels <- self$actual_labels()
+      predicted_labels <- self$predictions_to_labels()
       
       # Calcul de la matrice de confusion
       confusion_matrix <- table(True = true_labels, Predicted = predicted_labels)
       
       # Conversion de la matrice de confusion en data frame
       confusion_df <- as.data.frame(as.table(confusion_matrix))
-      colnames(confusion_df) <- c("True", "Predicted", "Frequency")
+      colnames(confusion_df) <- c("Real_class", "Predicted_class", "Frequency")
       
       # Calcul de l'accuracy
       total <- sum(confusion_matrix)
@@ -878,6 +859,22 @@ LogisticRegression <- R6Class("LogisticRegression",
       } else {
         cat("Model not yet fitted.\n")
       }
+    },
+
+    # Ajout de la méthode actual_labels dans la classe LogisticRegression
+    actual_labels = function() {
+      # Conversion des labels réels en vecteurs
+      actual_labels <- self$class_labels[self$y_test + 1]
+      
+      return(actual_labels)
+    },
+    
+    # Fonction de conversion des prédictions en labels
+    predictions_to_labels = function() {
+      # Conversion des labels prédits en vecteurs
+      predicted_labels <- self$class_labels[self$predicted_targets + 1]
+      
+      return(predicted_labels)
     }
   )
 )

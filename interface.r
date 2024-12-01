@@ -159,6 +159,7 @@ ui <- fluidPage(
       verbatimTextOutput("output"),
       verbatimTextOutput("missing_info"),
       uiOutput("data_preview_ui"),
+      uiOutput("performance_metrics_ui"),
       uiOutput("confusion_matrix_ui"),
       uiOutput("predictions_ui")
     )
@@ -167,7 +168,17 @@ ui <- fluidPage(
 
 # Serveur
 server <- function(input, output, session) {
-  rv <- reactiveValues(model = NULL, accuracy = NULL, confusion_matrix = NULL, predictions = NULL, temp_files = character(), trigger = 0)
+  rv <- reactiveValues(
+    model = NULL,
+    accuracy = NULL,
+    confusion_matrix = NULL,
+    predictions = NULL,
+    precision = NULL,
+    recall = NULL,
+    f1_score = NULL,
+    temp_files = character(),
+    trigger = 0
+  )
   
   observe({
     withProgress(message = 'File import > ', value = 0, {
@@ -198,6 +209,10 @@ server <- function(input, output, session) {
       rv$model <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
+      rv$accuracy <- NULL
+      rv$precision <- NULL
+      rv$recall <- NULL
+      rv$f1_score <- NULL
       
       # Vérification de l'existence du fichier
       incProgress(0.2, detail = "File verification in progress...")
@@ -265,6 +280,10 @@ server <- function(input, output, session) {
         rv$model <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
+        rv$accuracy <- NULL
+        rv$precision <- NULL
+        rv$recall <- NULL
+        rv$f1_score <- NULL
         
         incProgress(1, detail = "Error")
         
@@ -299,6 +318,10 @@ server <- function(input, output, session) {
       disable("predict")
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
+      rv$accuracy <- NULL
+      rv$precision <- NULL
+      rv$recall <- NULL
+      rv$f1_score <- NULL
       
       # Vérification de l'existence du fichier
       incProgress(0.1, detail = "Data verification in progress...")
@@ -370,6 +393,10 @@ server <- function(input, output, session) {
         rv$model <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
+        rv$accuracy <- NULL
+        rv$precision <- NULL
+        rv$recall <- NULL
+        rv$f1_score <- NULL
         
         output$output <- renderText(paste("[ERROR]", e$message))
         incProgress(1, detail = "Error")
@@ -504,6 +531,10 @@ server <- function(input, output, session) {
       disable("predict")
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
+      rv$accuracy <- NULL
+      rv$precision <- NULL
+      rv$recall <- NULL
+      rv$f1_score <- NULL
       
       # Obtention des colonnes à supprimer
       remove_cols <- if (is.null(input$remove_cols)) {
@@ -548,6 +579,10 @@ server <- function(input, output, session) {
         disable("predict")
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
+        rv$accuracy <- NULL
+        rv$precision <- NULL
+        rv$recall <- NULL
+        rv$f1_score <- NULL
         
         output$output <- renderText(paste("[ERROR]", e$message))
         incProgress(1, detail = "Error")
@@ -565,6 +600,10 @@ server <- function(input, output, session) {
       disable("predict")
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
+      rv$accuracy <- NULL
+      rv$precision <- NULL
+      rv$recall <- NULL
+      rv$f1_score <- NULL
       
       # Récupération des paramètres du modèle
       incProgress(0.1, detail = "Retrieving model parameters in progress...")
@@ -608,7 +647,7 @@ server <- function(input, output, session) {
 
         # Calcul de l'importance des variables
         incProgress(0.2, detail = "Variable importance calculation in progress...")
-        
+
         rv$model$var_importance()
         
         # Activation de l'inteface
@@ -622,6 +661,10 @@ server <- function(input, output, session) {
         disable("predict")
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
+        rv$accuracy <- NULL
+        rv$precision <- NULL
+        rv$recall <- NULL
+        rv$f1_score <- NULL
         
         output$output <- renderText(paste("[ERROR]", e$message))
         incProgress(1, detail = "Error")
@@ -635,10 +678,12 @@ server <- function(input, output, session) {
       incProgress(0.5, detail = "Prediction in progress...")
       tryCatch({
         # Prédiction des classes
-        accuracy <- rv$model$predict()
-        rv$accuracy <- accuracy
+        rv$model$predict()
         
-        # Récupération des prédictions et des classes réelles
+        # Génération de la matrice de confusion et des métriques
+        metrics <- rv$model$generate_confusion_matrix()
+        
+        # Stockage des métriques réelles et prédites
         predictions <- rv$model$predictions_to_labels()
         actual <- rv$model$actual_labels()
         
@@ -648,14 +693,17 @@ server <- function(input, output, session) {
           Predicted_class = predictions
         )
         
-        # Calcul de la matrice de confusion
-        print(rv$predictions$Real_class)
-        print(rv$predictions$Predicted_class)
-        confusion_mat <- table(rv$predictions$Real_class, rv$predictions$Predicted_class)
-        rv$confusion_matrix <- confusion_mat
+        # Stockage de la matrice de confusion
+        rv$confusion_matrix <- metrics$confusion_matrix
+        
+        # Stockage des métriques
+        rv$accuracy <- metrics$accuracy
+        rv$precision <- metrics$precision
+        rv$recall <- metrics$recall
+        rv$f1_score <- metrics$f1_score
         
         # Mise à jour de l'interface
-        output$output <- renderText(paste("[INFO] The data has been successfully predicted with an accuracy of", round(accuracy * 100, 2), "%."))
+        output$output <- renderText("[INFO] The data has been successfully predicted")
         
         incProgress(1, detail = "Success")
       }, error = function(e) {
@@ -663,7 +711,10 @@ server <- function(input, output, session) {
         output$output <- renderText(paste("[ERROR]", e$message))
         rv$predictions <- NULL
         rv$confusion_matrix <- NULL
-        rv$predictions <- NULL
+        rv$accuracy <- NULL
+        rv$precision <- NULL
+        rv$recall <- NULL
+        rv$f1_score <- NULL
         incProgress(1, detail = "Error")
       })
     })
@@ -676,6 +727,15 @@ server <- function(input, output, session) {
       h3("Data preview"),
       hr(),
       DT::dataTableOutput("data_preview")
+    )
+  })
+
+  # Affichage dynamique pour les métriques de performance
+  output$performance_metrics_ui <- renderUI({
+    req(rv$accuracy)
+    tagList(
+      h3("Performance metrics"),
+      tableOutput("metrics_table")
     )
   })
   
@@ -710,8 +770,24 @@ server <- function(input, output, session) {
     scrollX = TRUE
   ))
 
+  # Rendu de la table des métriques
+  output$metrics_table <- renderTable({
+    req(rv$accuracy, rv$precision, rv$recall, rv$f1_score)
+    metrics <- data.frame(
+      Metric = c("Accuracy", "Precision", "Recall", "F1 Score"),
+      Value = c(
+        round(rv$accuracy, 4),
+        round(mean(rv$precision, na.rm = TRUE), 4),
+        round(mean(rv$recall, na.rm = TRUE), 4),
+        round(mean(rv$f1_score, na.rm = TRUE), 4)
+      )
+    )
+    metrics
+  }, rownames = FALSE, colnames = TRUE, align = 'c', digits = 4)
+
   # Affichage de la matrice de confusion
   output$confusion_matrix <- DT::renderDataTable({
+    req(rv$confusion_matrix)
     as.data.frame.matrix(rv$confusion_matrix)
   }, options = list(
     paging = FALSE,
