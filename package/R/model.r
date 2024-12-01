@@ -524,6 +524,51 @@ LogisticRegression <- R6Class("LogisticRegression",
       private$state <- 2
     },
 
+    #' Predict class probabilities
+    #'
+    #' Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
+    #'
+    #' @return A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
+    #'
+    #' @details
+    #' The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
+    #' - Adds an intercept term to the test data.
+    #' - Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
+    #' - Applies the softmax function to convert logits into probabilities.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' # Predict probabilities for the test set
+    #' probabilities <- model$predict_proba()
+    #' 
+    #' # Print the predicted probabilities
+    #' print(probabilities)
+    #' }
+    #' 
+    #' @note The \code{predict_proba} method must be called after fitting the model using the \code{fit} method.
+    
+    # Fonction de prédiction des probabilités
+    predict_proba = function() {
+      if (private$state < 2) {
+        stop("[WARNING] You must fit the model before making predictions by calling the `fit` method.")
+      }
+      
+      X_input <- self$X_test
+     
+      # Ajout de l'intercept
+      X_input <- cbind(1, as.matrix(X_input))
+      
+      # Calcul des scores (logits)
+      scores <- X_input %*% self$coefficients
+      
+      # Application du softmax
+      exp_scores <- exp(scores - apply(scores, 1, max))
+      softmax_probs <- exp_scores / rowSums(exp_scores)
+      
+      # Retourner les probabilités pour chaque classe
+      return(softmax_probs)
+    },
+
     #' Calculate variable importance for Logistic Regression Model
     #'
     #' Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
@@ -691,46 +736,6 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Mise à jour de l'état
       private$state <- 4
     },
-
-    #' Predict class probabilities
-    #'
-    #' Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
-    #'
-    #' @return A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
-    #'
-    #' @details
-    #' The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
-    #' - Adds an intercept term to the test data.
-    #' - Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
-    #' - Applies the softmax function to convert logits into probabilities.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Predict probabilities for the test set
-    #' probabilities <- model$predict_proba()
-    #' 
-    #' # Print the predicted probabilities
-    #' print(probabilities)
-    #' }
-    
-    # Fonction de prédiction des probabilités
-    predict_proba = function() {
-      
-      X_input <- self$X_test
-     
-      # Ajout de l'intercept
-      X_input <- cbind(1, as.matrix(X_input))
-      
-      # Calcul des scores (logits)
-      scores <- X_input %*% self$coefficients
-      
-      # Application du softmax
-      exp_scores <- exp(scores - apply(scores, 1, max))
-      softmax_probs <- exp_scores / rowSums(exp_scores)
-      
-      # Retourner les probabilités pour chaque classe
-      return(softmax_probs)
-    },
     
     #' Generate Confusion Matrix and Performance Metrics
     #'
@@ -861,7 +866,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       }
     },
 
-    # Ajout de la méthode actual_labels dans la classe LogisticRegression
+    # Fonction de récuération des labels réels
     actual_labels = function() {
       # Conversion des labels réels en vecteurs
       actual_labels <- self$class_labels[self$y_test + 1]

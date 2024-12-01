@@ -24,6 +24,11 @@ Fit the Logistic Regression Model
 Adjusts the model coefficients using gradient descent.
 
 The \code{fit} method must be called after preparing the data using the \code{prepare_data} method.
+Predict class probabilities
+
+Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
+
+The \code{predict_proba} method must be called after fitting the model using the \code{fit} method.
 Calculate variable importance for Logistic Regression Model
 
 Calculates the importance scores of the variables (predictors) based on the coefficients of a fitted logistic regression model.
@@ -42,9 +47,9 @@ It calculates the scores for each class, applies the softmax function to obtain 
 and predicts the class with the highest probability. The accuracy of the model is then calculated based on the predictions.
 
 The \code{predict} method must be called after fitting the model using the \code{fit} method.
-Predict class probabilities
+Generate Confusion Matrix and Performance Metrics
 
-Computes the predicted probabilities for each class using the softmax function applied to the logistic regression model's coefficients and test data.
+Generates a confusion matrix based on actual and predicted labels and calculates key performance metrics such as accuracy, precision, recall, and F1-score for each class.
 
 The \code{generate_confusion_matrix} method must be called after making predictions using the \code{predict} method.
 Summary of the Logistic Regression Model
@@ -127,6 +132,19 @@ model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 50, tol = 0.001)
 
 
 ## ------------------------------------------------
+## Method `LogisticRegression$predict_proba`
+## ------------------------------------------------
+
+\dontrun{
+# Predict probabilities for the test set
+probabilities <- model$predict_proba()
+
+# Print the predicted probabilities
+print(probabilities)
+}
+
+
+## ------------------------------------------------
 ## Method `LogisticRegression$var_importance`
 ## ------------------------------------------------
 
@@ -163,22 +181,6 @@ accuracy <- model$predict()
 # Print the accuracy of the model on the test data
 print(accuracy)
 }
-
-
-## ------------------------------------------------
-## Method `LogisticRegression$predict_proba`
-## ------------------------------------------------
-
-\dontrun{
-# Predict probabilities for the test set
-probabilities <- model$predict_proba()
-
-# Print the predicted probabilities
-print(probabilities)
-}
-Generate Confusion Matrix and Performance Metrics
-
-Generates a confusion matrix based on actual and predicted labels and calculates key performance metrics such as accuracy, precision, recall, and F1-score for each class.
 
 
 ## ------------------------------------------------
@@ -274,10 +276,10 @@ Initializes the \code{LogisticRegression} class by loading data from a specified
 \item \href{#method-LogisticRegression-target_select}{\code{LogisticRegression$target_select()}}
 \item \href{#method-LogisticRegression-prepare_data}{\code{LogisticRegression$prepare_data()}}
 \item \href{#method-LogisticRegression-fit}{\code{LogisticRegression$fit()}}
+\item \href{#method-LogisticRegression-predict_proba}{\code{LogisticRegression$predict_proba()}}
 \item \href{#method-LogisticRegression-var_importance}{\code{LogisticRegression$var_importance()}}
 \item \href{#method-LogisticRegression-var_select}{\code{LogisticRegression$var_select()}}
 \item \href{#method-LogisticRegression-predict}{\code{LogisticRegression$predict()}}
-\item \href{#method-LogisticRegression-predict_proba}{\code{LogisticRegression$predict_proba()}}
 \item \href{#method-LogisticRegression-generate_confusion_matrix}{\code{LogisticRegression$generate_confusion_matrix()}}
 \item \href{#method-LogisticRegression-summary}{\code{LogisticRegression$summary()}}
 \item \href{#method-LogisticRegression-print}{\code{LogisticRegression$print()}}
@@ -482,6 +484,40 @@ model$fit(learning_rate = 0.01, max_iter = 1000, batch_size = 50, tol = 0.001)
 
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-LogisticRegression-predict_proba"></a>}}
+\if{latex}{\out{\hypertarget{method-LogisticRegression-predict_proba}{}}}
+\subsection{Method \code{predict_proba()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$predict_proba()}\if{html}{\out{</div>}}
+}
+
+\subsection{Details}{
+The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
+- Adds an intercept term to the test data.
+- Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
+- Applies the softmax function to convert logits into probabilities.
+}
+
+\subsection{Returns}{
+A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+# Predict probabilities for the test set
+probabilities <- model$predict_proba()
+
+# Print the predicted probabilities
+print(probabilities)
+}
+
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-LogisticRegression-var_importance"></a>}}
 \if{latex}{\out{\hypertarget{method-LogisticRegression-var_importance}{}}}
 \subsection{Method \code{var_importance()}}{
@@ -586,43 +622,6 @@ accuracy <- model$predict()
 # Print the accuracy of the model on the test data
 print(accuracy)
 }
-
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-LogisticRegression-predict_proba"></a>}}
-\if{latex}{\out{\hypertarget{method-LogisticRegression-predict_proba}{}}}
-\subsection{Method \code{predict_proba()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{LogisticRegression$predict_proba()}\if{html}{\out{</div>}}
-}
-
-\subsection{Details}{
-The `predict_proba` function calculates the probabilities for each class for the input test data (`X_test`) using the softmax function. It includes the following steps:
-- Adds an intercept term to the test data.
-- Computes the raw scores (logits) by multiplying the input data with the model's coefficients.
-- Applies the softmax function to convert logits into probabilities.
-}
-
-\subsection{Returns}{
-A matrix of predicted probabilities, where each row corresponds to a sample and each column corresponds to a class.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-# Predict probabilities for the test set
-probabilities <- model$predict_proba()
-
-# Print the predicted probabilities
-print(probabilities)
-}
-Generate Confusion Matrix and Performance Metrics
-
-Generates a confusion matrix based on actual and predicted labels and calculates key performance metrics such as accuracy, precision, recall, and F1-score for each class.
 
 }
 \if{html}{\out{</div>}}
