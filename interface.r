@@ -1,5 +1,5 @@
 # Liste des packages requis
-packages <- c("R6", "DT", "shiny", "shinythemes", "shinyjs", "readr", "readxl", "roxygen2", "stringr")
+packages <- c("R6", "DT", "ggplot2", "shiny", "shinythemes", "shinyjs", "readr", "readxl", "roxygen2", "reshape2", "stringr")
 
 # Installer les packages manquants
 installed_packages <- packages %in% rownames(installed.packages())
@@ -792,7 +792,8 @@ server <- function(input, output, session) {
     tagList(
       h3("Confusion matrix"),
       hr(),
-      DT::dataTableOutput("confusion_matrix")
+      DT::dataTableOutput("confusion_matrix"),
+      plotOutput("confusion_matrix_plot")
     )
   })
   
@@ -844,7 +845,6 @@ server <- function(input, output, session) {
   # Affichage du graphique d'importance des variables
   output$var_importance_plot <- renderPlot({
     req(rv$var_importance)
-    
     importance_df <- rv$var_importance
     
     # Trier par importance décroissante
@@ -899,6 +899,24 @@ server <- function(input, output, session) {
     ordering = FALSE,
     server = TRUE
   ))
+
+  # Affichage du graphique de la matrice de confusion
+  output$confusion_matrix_plot <- renderPlot({
+    req(rv$confusion_matrix)
+    confusion <- rv$confusion_matrix
+    confusion_matrix <- as.matrix(confusion)
+    
+    # Préparation des données
+    confusion_melt <- melt(confusion_matrix)
+    colnames(confusion_melt) <- c("Real", "Predicted", "Quantity")
+    
+    ggplot(data = confusion_melt, aes(x = Real, y = Predicted, fill = Quantity)) +
+      geom_tile() +
+      geom_text(aes(label = Quantity), color = "white") +
+      scale_fill_gradient(low = "lightgrey", high = "black") +
+      theme_minimal() +
+      labs(title = "Confusion matrix", x = "Real class", y = "Predicted class")
+  }, height = 400)
   
   # Affichage de la table des prédictions
   output$predictions <- DT::renderDataTable({
