@@ -148,7 +148,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       # Chargement d'un fichier Excel
       } else if (grepl("\\.xlsx$", file_path, ignore.case = TRUE)) {
-        data <- read_excel(file_path)
+        data <- read_excel(file_path, guess_max = 1000) %>% type_convert()
       }
 
       # Calcul du nombre de valeurs manquantes et du pourcentage

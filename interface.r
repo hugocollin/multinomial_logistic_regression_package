@@ -251,7 +251,7 @@ server <- function(input, output, session) {
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
       } else if (grepl("\\.xlsx$", input$file$name, ignore.case = TRUE)) {
         incProgress(0.2, detail = "File reading in progress...")
-        df <- read_excel(input$file$datapath)
+        df <- read_excel(input$file$datapath, guess_max = 1000) %>% type_convert()
         output$output <- renderText("[INFO] The file has been successfully uploaded.")
       } else {
         df <- NULL
