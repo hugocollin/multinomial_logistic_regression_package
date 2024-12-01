@@ -12,10 +12,13 @@ source("package/R/model.R")
 
 # Importation des bibliothèques nécessaires
 library(DT)
+library(ggplot2)
 library(shiny)
 library(shinythemes)
 library(shinyjs)
+library(readr)
 library(readxl)
+library(reshape2)
 library(stringr)
 
 # Définition de la taille maximale des fichiers à 1Go
