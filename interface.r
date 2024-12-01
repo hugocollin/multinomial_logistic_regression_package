@@ -159,6 +159,7 @@ ui <- fluidPage(
       verbatimTextOutput("output"),
       verbatimTextOutput("missing_info"),
       uiOutput("data_preview_ui"),
+      uiOutput("predict_proba_ui"),
       uiOutput("performance_metrics_ui"),
       uiOutput("confusion_matrix_ui"),
       uiOutput("predictions_ui")
@@ -170,6 +171,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   rv <- reactiveValues(
     model = NULL,
+    predict_proba = NULL,
     accuracy = NULL,
     confusion_matrix = NULL,
     predictions = NULL,
@@ -206,6 +208,7 @@ server <- function(input, output, session) {
       disable("fit_model")
       disable("predict")
       output$missing_info <- renderText(NULL)
+      rv$predict_proba <- NULL
       rv$model <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
@@ -277,6 +280,7 @@ server <- function(input, output, session) {
         disable("tol")
         disable("fit_model")
         disable("predict")
+        rv$predict_proba <- NULL
         rv$model <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
@@ -316,6 +320,7 @@ server <- function(input, output, session) {
       disable("tol")
       disable("fit_model")
       disable("predict")
+      rv$predict_proba <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       rv$accuracy <- NULL
@@ -391,6 +396,7 @@ server <- function(input, output, session) {
         disable("fit_model")
         disable("predict")
         rv$model <- NULL
+        rv$predict_proba <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         rv$accuracy <- NULL
@@ -529,6 +535,7 @@ server <- function(input, output, session) {
       disable("tol")
       disable("fit_model")
       disable("predict")
+      rv$predict_proba <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       rv$accuracy <- NULL
@@ -577,6 +584,7 @@ server <- function(input, output, session) {
         disable("tol")
         disable("fit_model")
         disable("predict")
+        rv$predict_proba <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         rv$accuracy <- NULL
@@ -598,6 +606,7 @@ server <- function(input, output, session) {
       incProgress(0.1, detail = "Interface updating in progress...")
       
       disable("predict")
+      rv$predict_proba <- NULL
       rv$confusion_matrix <- NULL
       rv$predictions <- NULL
       rv$accuracy <- NULL
@@ -649,6 +658,9 @@ server <- function(input, output, session) {
         incProgress(0.2, detail = "Variable importance calculation in progress...")
 
         rv$model$var_importance()
+
+        # Affichage des probabilités prédites
+        rv$predict_proba <- rv$model$predict_proba()
         
         # Activation de l'inteface
         enable("auto_delete_cols")
@@ -659,6 +671,7 @@ server <- function(input, output, session) {
       }, error = function(e) {
         # Désactivation de l'interface
         disable("predict")
+        rv$predict_proba <- NULL
         rv$confusion_matrix <- NULL
         rv$predictions <- NULL
         rv$accuracy <- NULL
@@ -730,6 +743,16 @@ server <- function(input, output, session) {
     )
   })
 
+  # Affichage dynamique pour les probabilités prédites
+  output$predict_proba_ui <- renderUI({
+    req(rv$predict_proba)
+    tagList(
+      h3("Predicted probabilities"),
+      hr(),
+      DT::dataTableOutput("predict_proba_table")
+    )
+  })
+
   # Affichage dynamique pour les métriques de performance
   output$performance_metrics_ui <- renderUI({
     req(rv$accuracy)
@@ -770,6 +793,18 @@ server <- function(input, output, session) {
     scrollX = TRUE
   ))
 
+  # Affichage des probabilités prédites
+  output$predict_proba_table <- DT::renderDataTable({
+    req(rv$predict_proba)
+    proba_df <- as.data.frame(rv$predict_proba)
+    colnames(proba_df) <- rv$model$class_labels
+    DT::datatable(proba_df, options = list(
+      pageLength = 10,
+      autoWidth = TRUE,
+      scrollX = TRUE
+    ))
+  }, server = TRUE)
+
   # Rendu de la table des métriques
   output$metrics_table <- renderTable({
     req(rv$accuracy, rv$precision, rv$recall, rv$f1_score)
@@ -796,8 +831,9 @@ server <- function(input, output, session) {
     ordering = FALSE
   ))
   
-  # Affichage de la table des prédictions détaillées
+  # Affichage de la table des prédictions
   output$predictions <- DT::renderDataTable({
+    req(rv$predictions)
     rv$predictions
   }, options = list(
     pageLength = 10,
