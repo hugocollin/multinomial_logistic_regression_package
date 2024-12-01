@@ -346,6 +346,10 @@ LogisticRegression <- R6Class("LogisticRegression",
         stop("[WARNING] You must initialize the model by calling the `new` method before preparing the data.")
       }
 
+      # Réinitialisation des attributs
+      self$levels_map <- list()
+      self$class_labels <- NULL
+
       # Récupération des données
       data <- self$data
       self$target <- target
@@ -408,19 +412,14 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Séparation des données en ensembles d'entraînement et de test
       set.seed(123)
       indices <- sample(1:n, size = floor(n * (1 - test_size)))
-      X_train <- X[indices, ]
-      y_train <- y[indices]
-      X_test <- X[-indices, ]
-      y_test <- y[-indices]
-      
-      self$data <- data
+      self$X_train <- X[indices, ]
+      self$y_train <- y[indices]
+      self$X_test <- X[-indices, ]
+      self$y_test <- y[-indices]
+
       self$X <- X
       self$y <- y
       self$n <- n
-      self$X_train <- X_train
-      self$y_train <- y_train
-      self$X_test <- X_test
-      self$y_test <- y_test
 
       # Mise à jour de l'état
       private$state <- 1
@@ -686,8 +685,9 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Prédiction des classes (classe ayant la probabilité maximale)
       predicted_classes <- apply(softmax_probs, 1, which.max) - 1
       
-      
+      # Stockage des classes prédites
       self$predicted_targets <- predicted_classes
+      
       # Calcul de la performance
       self.accuracy <- mean(predicted_classes == self$y_test)
 
