@@ -782,7 +782,8 @@ server <- function(input, output, session) {
     req(rv$accuracy)
     tagList(
       h3("Performance metrics"),
-      tableOutput("metrics_table")
+      tableOutput("metrics_table"),
+      plotOutput("metrics_plot")
     )
   })
   
@@ -847,7 +848,7 @@ server <- function(input, output, session) {
     req(rv$var_importance)
     importance_df <- rv$var_importance
     
-    # Trier par importance décroissante
+    # Tri par importance décroissante
     importance_df <- importance_df[order(-importance_df$Importance), ]
     
     # Affichage du graphique et récupération des positions des barres
@@ -873,7 +874,7 @@ server <- function(input, output, session) {
     )
   }, height = 400)
 
-  # Rendu de la table des métriques
+  # Affichage du graphique des métriques de performance
   output$metrics_table <- renderTable({
     req(rv$accuracy, rv$precision, rv$recall, rv$f1_score)
     metrics <- data.frame(
@@ -887,6 +888,34 @@ server <- function(input, output, session) {
     )
     metrics
   }, rownames = FALSE, colnames = TRUE, align = 'c', digits = 4, server = TRUE)
+
+  # Affichage du graphique des métriques de performance
+  output$metrics_plot <- renderPlot({
+    req(rv$accuracy, rv$precision, rv$recall, rv$f1_score)
+    
+    metrics <- data.frame(
+      Metric = c("Accuracy", "Precision", "Recall", "F1 Score"),
+      Value = c(rv$accuracy, mean(rv$precision, na.rm = TRUE), mean(rv$recall, na.rm = TRUE), mean(rv$f1_score, na.rm = TRUE))
+    )
+    
+    ggplot(metrics, aes(x = Metric, y = Value, fill = Metric)) +
+      geom_bar(stat = "identity") +
+      ylim(0, 1.1) +
+      theme_minimal() +
+      labs(title = "Performance metrics", y = "Value") +
+      theme(
+        legend.position = "none",
+      ) +
+      scale_fill_manual(values = c(
+      "Accuracy" = "black",
+      "Precision" = "black",
+      "Recall" = "black",
+      "F1 Score" = "black"
+    )) +
+    geom_text(aes(label = round(Value, 4)), 
+              vjust = -0.5,
+              size = 4)
+  }, height = 400)
 
   # Affichage de la matrice de confusion
   output$confusion_matrix <- DT::renderDataTable({
