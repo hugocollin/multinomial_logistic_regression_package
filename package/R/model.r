@@ -600,7 +600,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       }
       
       # Extraire les coefficients sans l'intercept (1ère colonne)
-      coef_matrix <- self$coefficients[-1, ]
+      coef_matrix <- self$coefficients[-1, , drop = FALSE]
       
       # Calcul des scores d'importance
       importance_scores <- apply(abs(coef_matrix), 1, sum)
@@ -610,9 +610,12 @@ LogisticRegression <- R6Class("LogisticRegression",
       
       # Associer les scores aux noms des variables
       variable_names <- colnames(self$X_train)
+
+
       importance <- data.frame(
         Variable = variable_names,
-        Importance = importance_scores
+        Importance = importance_scores,
+        stringsAsFactors = FALSE
       )
       
       # Trier par ordre décroissant d'importance

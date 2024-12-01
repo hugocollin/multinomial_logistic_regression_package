@@ -829,7 +829,7 @@ server <- function(input, output, session) {
       pageLength = 10,
       autoWidth = TRUE,
       scrollX = TRUE
-    ))
+    ), rownames = FALSE)
   }, server = TRUE)
 
   # Rendu de la table des métriques
