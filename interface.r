@@ -160,6 +160,7 @@ ui <- fluidPage(
       verbatimTextOutput("missing_info"),
       uiOutput("data_preview_ui"),
       uiOutput("predict_proba_ui"),
+      uiOutput("var_importance_ui"),
       uiOutput("performance_metrics_ui"),
       uiOutput("confusion_matrix_ui"),
       uiOutput("predictions_ui")
@@ -172,6 +173,7 @@ server <- function(input, output, session) {
   rv <- reactiveValues(
     model = NULL,
     predict_proba = NULL,
+    var_importance = NULL,
     accuracy = NULL,
     confusion_matrix = NULL,
     predictions = NULL,
@@ -662,6 +664,9 @@ server <- function(input, output, session) {
         # Affichage des probabilités prédites
         rv$predict_proba <- rv$model$predict_proba()
         
+        # Affichage de l'importance des variables
+        rv$var_importance <- rv$model$var_importance()
+        
         # Activation de l'inteface
         enable("auto_delete_cols")
         enable("predict")
@@ -716,7 +721,7 @@ server <- function(input, output, session) {
         rv$f1_score <- metrics$f1_score
         
         # Mise à jour de l'interface
-        output$output <- renderText("[INFO] The data has been successfully predicted")
+        output$output <- renderText("[INFO] The data has been successfully predicted.")
         
         incProgress(1, detail = "Success")
       }, error = function(e) {
@@ -750,6 +755,16 @@ server <- function(input, output, session) {
       h3("Predicted probabilities"),
       hr(),
       DT::dataTableOutput("predict_proba_table")
+    )
+  })
+
+  # Affichage dynamique pour l'importance des variables
+  output$var_importance_ui <- renderUI({
+    req(rv$var_importance)
+    tagList(
+      h3("Variable importance"),
+      hr(),
+      DT::dataTableOutput("var_importance_table")
     )
   })
 
@@ -787,10 +802,10 @@ server <- function(input, output, session) {
     rv$trigger
     rv$model$data
   }, options = list(
-    server = TRUE,
     pageLength = 10,
     autoWidth = TRUE,
-    scrollX = TRUE
+    scrollX = TRUE,
+    server = TRUE
   ))
 
   # Affichage des probabilités prédites
@@ -799,6 +814,18 @@ server <- function(input, output, session) {
     proba_df <- as.data.frame(rv$predict_proba)
     colnames(proba_df) <- rv$model$class_labels
     DT::datatable(proba_df, options = list(
+      pageLength = 10,
+      autoWidth = TRUE,
+      scrollX = TRUE
+    ))
+  }, server = TRUE)
+
+  # Affichage de la table d'importance des variables
+  output$var_importance_table <- DT::renderDataTable({
+    req(rv$var_importance)
+    importance_df <- as.data.frame(rv$var_importance)
+    
+    DT::datatable(importance_df, options = list(
       pageLength = 10,
       autoWidth = TRUE,
       scrollX = TRUE
@@ -818,7 +845,7 @@ server <- function(input, output, session) {
       )
     )
     metrics
-  }, rownames = FALSE, colnames = TRUE, align = 'c', digits = 4)
+  }, rownames = FALSE, colnames = TRUE, align = 'c', digits = 4, server = TRUE)
 
   # Affichage de la matrice de confusion
   output$confusion_matrix <- DT::renderDataTable({
@@ -828,7 +855,8 @@ server <- function(input, output, session) {
     paging = FALSE,
     searching = FALSE,
     info = FALSE,
-    ordering = FALSE
+    ordering = FALSE,
+    server = TRUE
   ))
   
   # Affichage de la table des prédictions
@@ -838,7 +866,8 @@ server <- function(input, output, session) {
   }, options = list(
     pageLength = 10,
     autoWidth = TRUE,
-    scrollX = TRUE
+    scrollX = TRUE,
+    server = TRUE
   ))
   
   # Suppression des fichiers temporaires à la fermeture du programme
