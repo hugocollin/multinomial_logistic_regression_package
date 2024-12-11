@@ -599,13 +599,13 @@ LogisticRegression <- R6Class("LogisticRegression",
         stop("[WARNING] You must fit the model before calculating variable importance by calling the `fit` method.")
       }
       
-      # Extraire les coefficients sans l'intercept (1ère colonne)
+      # Extraire les coefficients sans l'intercept
       coef_matrix <- self$coefficients[-1, , drop = FALSE]
       
       # Calcul des scores d'importance
       importance_scores <- apply(abs(coef_matrix), 1, sum)
       
-      # Normalisation des scores (optionnelle)
+      # Normalisation des scores
       importance_scores <- importance_scores / sum(importance_scores)
       
       # Associer les scores aux noms des variables
@@ -686,7 +686,7 @@ LogisticRegression <- R6Class("LogisticRegression",
       # Mettre à jour les prédicteurs de la classe
       self$predictors <- selected_variables
       
-      cat("[Info] Variables selected based on importance:\n")
+      cat("[INFO] Variables selected based on importance:\n")
       print(selected_variables)
 
       return(selected_variables)

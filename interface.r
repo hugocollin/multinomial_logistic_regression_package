@@ -508,19 +508,26 @@ server <- function(input, output, session) {
     if (input$auto_delete_cols) {
       withProgress(message = 'Auto column suppression > ', value = 0, {
         disable("remove_cols")
+
+        # Récupération du nom des colonnes et de la variable cible
+        cols_names <- rv$model$cols_names
+        target <- rv$model$target
         
-        # Sélection des colonnes à supprimer
-        cols_to_remove <- rv$model$var_select()
+        # Récupération des colonnes à conserver
+        keep_cols <- rv$model$var_select()
         
-        # Sélection automatique des colonnes à supprimer
+        # Calcul et sélection automatique des colonnes à supprimer
         incProgress(0.2, detail = "Auto selection of columns to be removed in progress...")
+
+        remove_cols <- setdiff(cols_names, keep_cols)
+        remove_cols <- setdiff(remove_cols, target)
         
-        updateSelectInput(session, "remove_cols", selected = cols_to_remove)
-        
-        if(is.null(cols_to_remove)) {
+        if(is.null(remove_cols)) {
           output$output <- renderText(paste("[INFO] No columns need to be removed."))
         } else {
-          output$output <- renderText(paste("[INFO] The columns", paste(cols_to_remove, collapse = ", "), "have been automatically selected for deletion."))
+          updateSelectInput(session, "remove_cols", selected = remove_cols)
+          
+          output$output <- renderText(paste("[INFO] The columns", paste(remove_cols, collapse = ", "), "have been automatically selected for deletion."))
         }
         
         incProgress(1, detail = "Success")
