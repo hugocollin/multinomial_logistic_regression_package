@@ -1,17 +1,43 @@
 # README : Multinomial Logistic Regression package
 
-## Description
-
-This package is a simple implementation of the Multinomial Logistic Regression algorithm in R. It is a supervised learning algorithm that is used when the target variable is categorical. It is an extension of the logistic regression algorithm that is used when the target variable is binary. The multinomial logistic regression algorithm is used when the target variable has more than two categories. The algorithm is implemented using the maximum likelihood estimation method and used to predict the probability of the target variable belonging to each category.
-
 ## Table of contents
 
 - [Description](#description)
+- [Project structure](#project-structure)
 - [Installation of the package](#installation-of-the-package)
 - [Installation of the UI package](#installation-of-the-ui-package)
 - [Usage of the package](#usage-of-the-package)
 - [Usage of the UI package](#usage-of-the-ui-package)
 - [Authors](#authors)
+
+## Description
+
+This package is a simple implementation of the Multinomial Logistic Regression algorithm in R. It is a supervised learning algorithm that is used when the target variable is categorical. It is an extension of the logistic regression algorithm that is used when the target variable is binary. The multinomial logistic regression algorithm is used when the target variable has more than two categories. The algorithm is implemented using the maximum likelihood estimation method and used to predict the probability of the target variable belonging to each category.
+
+## Project structure
+
+```bash
+├── data/
+│   ├── iris_extended.csv
+│   ├── iris_original.csv
+│   ├── iris_original.xlsx
+│   ├── iris_tabulation.csv
+│   └── loan_data.csv
+├── docs/
+|   ├── multinomial_logistic_regression_report.pdf
+│   ├── multinomial_logistic_regression_report.tex
+|   ├── package.zip
+│   └── README.md
+├── package/
+│   ├── man/
+│   │   ├── LogisticRegression.Rd
+│   │   └── summary.R6.Rd
+│   ├── R/
+│   |   └── model.r
+|   ├── DESCRIPTION
+│   └── NAMESPACE
+└── interface.r
+```
 
 ## Installation of the package
 
