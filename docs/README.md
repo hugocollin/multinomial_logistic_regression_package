@@ -24,17 +24,17 @@ This package is a simple implementation of the Multinomial Logistic Regression a
 │   ├── iris_tabulation.csv
 │   └── loan_data.csv
 ├── docs/
-|   ├── multinomial_logistic_regression_report.pdf
+│   ├── multinomial_logistic_regression_report.pdf
 │   ├── multinomial_logistic_regression_report.tex
-|   ├── package.zip
+│   ├── package.zip
 │   └── README.md
 ├── package/
 │   ├── man/
 │   │   ├── LogisticRegression.Rd
 │   │   └── summary.R6.Rd
 │   ├── R/
-│   |   └── model.r
-|   ├── DESCRIPTION
+│   │   └── model.r
+│   ├── DESCRIPTION
 │   └── NAMESPACE
 └── interface.r
 ```
